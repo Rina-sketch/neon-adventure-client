@@ -1309,6 +1309,13 @@ let roomId = null;
 // Initialize Socket.IO for cooperative mode
 function initPeer(host) {
   isHost = host;
+
+  // Закрываем старое соединение, если оно существует
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
   socket = io('https://neon-adventure-peerjs.onrender.com', { // Замените на ваш домен
     transports: ['websocket'],
     reconnection: true,
@@ -1316,7 +1323,7 @@ function initPeer(host) {
   });
 
   socket.on('connect', () => {
-    console.log('Socket.IO подключено:', socket.id);
+    console.log('Socket.IO подключено (хост):', socket.id);
     if (isHost) {
       roomId = socket.id; // Используем socket.id как ID комнаты
       peerIdSpan.textContent = roomId;
@@ -1327,6 +1334,11 @@ function initPeer(host) {
 
   socket.on('playerJoined', (playerId) => {
     if (isHost) {
+      console.log('Клиент подключился к хосту:', playerId);
+      if (playerId === socket.id) {
+        console.warn('Хост пытается подключиться сам к себе, игнорируем');
+        return; // Игнорируем, если хост сам себя подключил
+      }
       isCoopMode = true;
       player2 = {
         x: levels[currentLevel].startPos2.x,
@@ -1353,11 +1365,16 @@ function initPeer(host) {
       titleScreen.style.display = 'none';
       menuBgm.pause();
       loadLevel(1);
-      socket.emit('gameData', roomId, {type: 'startGame', level: currentLevel, state: {
-        player: {...player},
-        player2: {...player2},
-        walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
-      }});
+      socket.emit('gameData', roomId, {
+        type: 'startGame',
+        level: currentLevel,
+        state: {
+          player: {...player},
+          player2: {...player2},
+          walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
+        }
+      });
+      console.log('Игра началась для хоста, ожидание клиента завершено');
       gameLoop();
     }
   });
@@ -1365,7 +1382,7 @@ function initPeer(host) {
   socket.on('gameData', handlePeerData);
 
   socket.on('connect_error', (err) => {
-    console.error('Socket.IO ошибка:', err);
+    console.error('Socket.IO ошибка (хост):', err);
     showDialog(["Ошибка соединения. Попробуйте снова."]);
   });
 }
@@ -1373,6 +1390,13 @@ function initPeer(host) {
 // Join cooperative game
 function joinCoop(peerId) {
   roomId = peerId;
+
+  // Закрываем старое соединение, если оно существует
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
   socket = io('https://neon-adventure-peerjs.onrender.com', { // Замените на ваш домен
     transports: ['websocket'],
     reconnection: true,
@@ -1380,17 +1404,21 @@ function joinCoop(peerId) {
   });
 
   socket.on('connect', () => {
-    console.log('Socket.IO подключено:', socket.id);
+    console.log('Socket.IO подключено (клиент):', socket.id);
+    console.log('Клиент пытается присоединиться к комнате:', roomId);
     socket.emit('join', roomId);
     isCoopMode = true;
     player = {...player, id: 'player2', color: '#f00'};
     player2 = {...player, id: 'player1', color: '#00f'};
   });
 
-  socket.on('gameData', handlePeerData);
+  socket.on('gameData', (data) => {
+    console.log('Клиент получил данные:', data);
+    handlePeerData(data);
+  });
 
   socket.on('connect_error', (err) => {
-    console.error('Socket.IO ошибка:', err);
+    console.error('Socket.IO ошибка (клиент):', err);
     showDialog(["Не удалось подключиться. Проверьте ID."]);
   });
 }
