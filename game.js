@@ -1670,6 +1670,7 @@ function handlePeerData(data) {
 
 // Main game loop
 function gameLoop() {
+console.log('Game loop started on client');
     if (titleScreen.style.display !== 'none' || gameOverScreen.style.display === 'flex' || 
         levelCompleteScreen.style.display === 'flex' || victoryScreen.style.display === 'flex' || 
         skinMenu.style.display === 'flex' || puzzleContainer.style.display === 'flex') {
