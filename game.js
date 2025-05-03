@@ -1384,7 +1384,7 @@ function initPeer(host) {
           walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
         }
       });
-      console.log('Игра началась для хоста и клиента');
+      console.log('Игра началась для хоста и клиента, отправлено gameData');
       gameLoop();
     }
   });
