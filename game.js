@@ -1306,11 +1306,16 @@ function draw() {
 // Initialize PeerJS for cooperative mode
 function initPeer(host) {
     isHost = host;
-    peer = new Peer({
-  host: 'neon-adventure-peerjs.onrender.com', // Замените на ваш домен от Render, например, 'neon-adventure-peerjs.onrender.com'
+peer = new Peer({
+  host: 'neon-adventure-peerjs.onrender.com',
   port: 443,
   path: '/myapp',
-  secure: true
+  secure: true,
+  config: {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' }
+    ]
+  }
 });
     
     peer.on('open', (id) => {
