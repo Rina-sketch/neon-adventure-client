@@ -1305,70 +1305,74 @@ function draw() {
 
 // Initialize PeerJS for cooperative mode
 function initPeer(host) {
-    isHost = host;
-peer = new Peer({
-  host: 'neon-adventure-peerjs.onrender.com',
-  port: 443,
-  path: '/myapp',
-  secure: true,
-  config: {
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' }
-    ]
-  }
-});
-    
-    peer.on('open', (id) => {
-        if (isHost) {
-            peerIdSpan.textContent = id;
-            peerIdDisplay.style.display = 'block';
-            showDialog(["Поделитесь этим ID с другом для совместной игры: " + id]);
-        }
-    });
-    
-    peer.on('connection', (connection) => {
-        if (isHost) {
-            conn = connection;
-            isCoopMode = true;
-            player2 = {
-                x: levels[currentLevel].startPos2.x,
-                y: levels[currentLevel].startPos2.y,
-                width: 30,
-                height: 30,
-                speed: 5,
-                direction: 'right',
-                keys: 0,
-                lives: 3,
-                hasSword: false,
-                invincible: false,
-                invincibleTimer: 0,
-                color: '#f00',
-                hasPotion: false,
-                damageMultiplier: 1,
-                catEars: false,
-                earAngle: 0,
-                tailAngle: 0,
-                isMoving: false,
-                id: 'player2',
-                keysPressed: {}
-            };
-            conn.on('data', handlePeerData);
-            titleScreen.style.display = 'none';
-            menuBgm.pause();
-            loadLevel(1);
-            conn.send({type: 'startGame', level: currentLevel, state: {
-                player: {...player},
-                player2: {...player2},
-                walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
-            }});
-            gameLoop();
-        }
-    });
-    
-    peer.on('error', (err) => {
-        console.error('PeerJS ошибка:', err);
-        showDialog(["Ошибка соединения. Попробуйте снова."]);
-    });
+  isHost = host;
+  peer = new Peer({
+    host: 'neon-adventure-peerjs.onrender.com', // Замените на ваш реальный домен
+    port: 443,
+    path: '/myapp',
+    secure: true,
+    config: {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ]
+    }
+  });
+
+  peer.on('open', (id) => {
+    console.log('Peer открыто с ID:', id);
+    if (isHost) {
+      peerIdSpan.textContent = id;
+      peerIdDisplay.style.display = 'block';
+      showDialog(["Поделитесь этим ID с другом для совместной игры: " + id]);
+    }
+  });
+
+  peer.on('connection', (connection) => {
+    console.log('Новое соединение от клиента');
+    if (isHost) {
+      conn = connection;
+      isCoopMode = true;
+      player2 = {
+        x: levels[currentLevel].startPos2.x,
+        y: levels[currentLevel].startPos2.y,
+        width: 30,
+        height: 30,
+        speed: 5,
+        direction: 'right',
+        keys: 0,
+        lives: 3,
+        hasSword: false,
+        invincible: false,
+        invincibleTimer: 0,
+        color: '#f00',
+        hasPotion: false,
+        damageMultiplier: 1,
+        catEars: false,
+        earAngle: 0,
+        tailAngle: 0,
+        isMoving: false,
+        id: 'player2',
+        keysPressed: {}
+      };
+      conn.on('data', handlePeerData);
+      titleScreen.style.display = 'none';
+      menuBgm.pause();
+      loadLevel(1);
+      conn.send({type: 'startGame', level: currentLevel, state: {
+        player: {...player},
+        player2: {...player2},
+        walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
+      }});
+      gameLoop();
+    }
+  });
+
+  peer.on('error', (err) => {
+    console.error('PeerJS ошибка:', err);
+    showDialog(["Ошибка соединения. Попробуйте снова."]);
+  });
 }
 
 // Join cooperative game
