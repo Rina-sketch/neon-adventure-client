@@ -77,9 +77,9 @@ let frameCount = 0;
 let backgroundImages = {};
 let bossDefeated = false;
 let isCoopMode = false;
-let peer = null;
-let conn = null;
 let isHost = false;
+let socket = null;
+let roomId = null;
 
 // Input handling
 const keysPressed = {
@@ -451,12 +451,16 @@ function loadLevel(levelNum) {
     
     playBackgroundMusic();
     
-    if (isCoopMode && conn) {
-        socket.emit({type: 'loadLevel', levelNum, state: {
-            player: {...player},
-            player2: player2 ? {...player2} : null,
-            walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
-        }});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {
+            type: 'loadLevel',
+            levelNum,
+            state: {
+                player: {...player},
+                player2: player2 ? {...player2} : null,
+                walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
+            }
+        });
     }
 }
 
@@ -483,15 +487,15 @@ document.addEventListener('keydown', (e) => {
     if (e.code in keysPressed) {
         keysPressed[e.code] = true;
         player.keysPressed[e.code] = true;
-        if (isCoopMode && conn) {
-            socket.emit({type: 'keyDown', code: e.code});
+        if (isCoopMode && socket) {
+            socket.emit('gameData', {type: 'keyDown', code: e.code, playerId: player.id});
         }
     }
     
     if (e.code === 'KeyC' && skinMenu.style.display !== 'flex') {
         skinMenu.style.display = 'flex';
-        if (isCoopMode && conn) {
-            socket.emit({type: 'openSkinMenu'});
+        if (isCoopMode && socket) {
+            socket.emit('gameData', {type: 'openSkinMenu'});
         }
     }
 });
@@ -500,8 +504,8 @@ document.addEventListener('keyup', (e) => {
     if (e.code in keysPressed) {
         keysPressed[e.code] = false;
         player.keysPressed[e.code] = false;
-        if (isCoopMode && conn) {
-            socket.emit({type: 'keyUp', code: e.code});
+        if (isCoopMode && socket) {
+            socket.emit('gameData', {type: 'keyUp', code: e.code, playerId: player.id});
         }
     }
 });
@@ -569,24 +573,28 @@ function movePlayer(p) {
         }
     }
     
-    if (isCoopMode && conn) {
-        socket.emit({type: 'playerUpdate', player: {
-            x: p.x,
-            y: p.y,
-            direction: p.direction,
-            isMoving: p.isMoving,
-            keys: p.keys,
-            lives: p.lives,
-            hasSword: p.hasSword,
-            invincible: p.invincible,
-            invincibleTimer: p.invincibleTimer,
-            color: p.color,
-            hasPotion: p.hasPotion,
-            damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars,
-            earAngle: p.earAngle,
-            tailAngle: p.tailAngle
-        }, playerId: p.id});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {
+            type: 'playerUpdate',
+            player: {
+                x: p.x,
+                y: p.y,
+                direction: p.direction,
+                isMoving: p.isMoving,
+                keys: p.keys,
+                lives: p.lives,
+                hasSword: p.hasSword,
+                invincible: p.invincible,
+                invincibleTimer: p.invincibleTimer,
+                color: p.color,
+                hasPotion: p.hasPotion,
+                damageMultiplier: p.damageMultiplier,
+                catEars: p.catEars,
+                earAngle: p.earAngle,
+                tailAngle: p.tailAngle
+            },
+            playerId: p.id
+        });
     }
 }
 
@@ -619,8 +627,8 @@ function checkKeyCollisions(p) {
             showDialog(["Вы нашли ключ!"]);
             keys.splice(i, 1);
             i--;
-            if (isCoopMode && conn) {
-                socket.emit({type: 'keyCollected', playerId: p.id, keyIndex: i});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'keyCollected', playerId: p.id, keyIndex: i});
             }
         }
     }
@@ -638,8 +646,8 @@ function checkDoorCollisions(p) {
                 if (currentLevel === 3 && (p.hasPotion || (player2 && player2.hasPotion))) {
                     door.locked = false;
                     showDialog(["Дверь открыта силой зелья!"]);
-                    if (isCoopMode && conn) {
-                        socket.emit({type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
+                    if (isCoopMode && socket) {
+                        socket.emit('gameData', {type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
                     }
                 } else if (p.keys > 0 || (player2 && player2.keys > 0)) {
                     door.locked = false;
@@ -647,16 +655,16 @@ function checkDoorCollisions(p) {
                     if (player2) player2.keys = Math.max(0, player2.keys - (1 - p.keys));
                     keysDisplay.textContent = p.keys + (player2 ? player2.keys : 0);
                     showDialog(["Дверь открыта!"]);
-                    if (isCoopMode && conn) {
-                        socket.emit({type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
+                    if (isCoopMode && socket) {
+                        socket.emit('gameData', {type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
                     }
                 } else {
                     showDialog(["Дверь заперта."]);
                 }
             } else {
                 levelCompleteScreen.style.display = 'flex';
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'levelComplete'});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'levelComplete'});
                 }
             }
         }
@@ -673,8 +681,8 @@ function checkNPCCollisions(p) {
             
             if (npc.hasPuzzle && !p.hasPotion && !(player2 && player2.hasPotion)) {
                 puzzleContainer.style.display = 'flex';
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'openPuzzle'});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'openPuzzle'});
                 }
             } else {
                 showDialog(npc.dialog);
@@ -700,8 +708,8 @@ function checkChestCollisions(p) {
                 p.hasSword = true;
                 showDialog(["Вы нашли меч! Атакуйте пробелом."]);
             }
-            if (isCoopMode && conn) {
-                socket.emit({type: 'chestOpened', chestIndex: chests.indexOf(chest), playerId: p.id});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'chestOpened', chestIndex: chests.indexOf(chest), playerId: p.id});
             }
         }
     }
@@ -725,8 +733,8 @@ function checkEnemyCollisions(p) {
             
             if (p.lives <= 0) {
                 gameOverScreen.style.display = 'flex';
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'gameOver'});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'gameOver'});
                 }
             } else {
                 showDialog(["Вы получили удар!"]);
@@ -739,8 +747,8 @@ function checkEnemyCollisions(p) {
                 p.y += (dy / distance) * 30;
                 p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
                 p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
                 }
             }
         }
@@ -763,8 +771,8 @@ function checkBossCollision(p) {
         
         if (p.lives <= 0) {
             gameOverScreen.style.display = 'flex';
-            if (isCoopMode && conn) {
-                socket.emit({type: 'gameOver'});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'gameOver'});
             }
         } else {
             showDialog(["Босс атаковал вас!"]);
@@ -777,8 +785,8 @@ function checkBossCollision(p) {
             p.y += (dy / distance) * 50;
             p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
             p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
-            if (isCoopMode && conn) {
-                socket.emit({type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
             }
         }
     }
@@ -826,8 +834,8 @@ function attack(p) {
                 p.lives++;
                 livesDisplay.textContent = p.lives;
                 showDialog(["Враг повержен! +1 жизнь!"]);
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'enemyDefeated', enemyIndex: i, playerId: p.id, lives: p.lives});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'enemyDefeated', enemyIndex: i, playerId: p.id, lives: p.lives});
                 }
             }
         }
@@ -847,8 +855,8 @@ function attack(p) {
             boss = null;
             showDialog(["Босс побежден! Вы нашли секретный сундук!"]);
             victoryScreen.style.display = 'flex';
-            if (isCoopMode && conn) {
-                socket.emit({type: 'bossDefeated'});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'bossDefeated'});
             }
         }
     }
@@ -881,8 +889,8 @@ function moveEnemies() {
             }
         }
     }
-    if (isCoopMode && conn) {
-        socket.emit({type: 'enemiesUpdate', enemies});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {type: 'enemiesUpdate', enemies});
     }
 }
 
@@ -916,8 +924,8 @@ function moveBoss() {
             dy: dy / distance,
             type: 'bossProjectile'
         });
-        if (isCoopMode && conn) {
-            socket.emit({type: 'bossProjectile', x: boss.x + boss.width / 2, y: boss.y + boss.height / 2, dx: dx / distance, dy: dy / distance});
+        if (isCoopMode && socket) {
+            socket.emit('gameData', {type: 'bossProjectile', x: boss.x + boss.width / 2, y: boss.y + boss.height / 2, dx: dx / distance, dy: dy / distance});
         }
     }
     
@@ -926,8 +934,8 @@ function moveBoss() {
         boss.y -= (dy / distance) * boss.speed * 2;
     }
     
-    if (isCoopMode && conn) {
-        socket.emit({type: 'bossUpdate', boss});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {type: 'bossUpdate', boss});
     }
 }
 
@@ -944,8 +952,8 @@ function moveProjectiles() {
             if (checkWallCollision(obj.x, obj.y, obj.width, obj.height)) {
                 gameObjects.splice(i, 1);
                 i--;
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'projectileRemoved', index: i});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'projectileRemoved', index: i});
                 }
                 continue;
             }
@@ -964,8 +972,8 @@ function moveProjectiles() {
                     
                     if (p.lives <= 0) {
                         gameOverScreen.style.display = 'flex';
-                        if (isCoopMode && conn) {
-                            socket.emit({type: 'gameOver'});
+                        if (isCoopMode && socket) {
+                            socket.emit('gameData', {type: 'gameOver'});
                         }
                     } else {
                         showDialog(["Снаряд босса попал в вас!"]);
@@ -978,15 +986,15 @@ function moveProjectiles() {
                         p.y += (dy / distance) * 50;
                         p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
                         p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
-                        if (isCoopMode && conn) {
-                            socket.emit({type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
+                        if (isCoopMode && socket) {
+                            socket.emit('gameData', {type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
                         }
                     }
                     
                     gameObjects.splice(i, 1);
                     i--;
-                    if (isCoopMode && conn) {
-                        socket.emit({type: 'projectileRemoved', index: i});
+                    if (isCoopMode && socket) {
+                        socket.emit('gameData', {type: 'projectileRemoved', index: i});
                     }
                     break;
                 }
@@ -995,14 +1003,14 @@ function moveProjectiles() {
             if (obj.x < 0 || obj.x > canvas.width || obj.y < 0 || obj.y > canvas.height) {
                 gameObjects.splice(i, 1);
                 i--;
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'projectileRemoved', index: i});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', {type: 'projectileRemoved', index: i});
                 }
             }
         }
     }
-    if (isCoopMode && conn) {
-        socket.emit({type: 'projectilesUpdate', gameObjects});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {type: 'projectilesUpdate', gameObjects});
     }
 }
 
@@ -1020,8 +1028,8 @@ function showDialog(messages) {
         } else {
             dialog.style.display = 'none';
         }
-        if (isCoopMode && conn) {
-            socket.emit({type: 'dialogAdvance', messages});
+        if (isCoopMode && socket) {
+            socket.emit('gameData', {type: 'dialogAdvance', messages});
         }
     };
     
@@ -1303,199 +1311,86 @@ function draw() {
     ctx.shadowBlur = 0;
 }
 
-let socket = null;
-let roomId = null;
-let isClientReady = false;
-
 // Initialize Socket.IO for cooperative mode
 function initPeer(host) {
-  isHost = host;
-
-  // Закрываем старое соединение, если оно существует
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-
-  socket = io('https://neon-adventure-peerjs.onrender.com', { // Замените на ваш домен
-    transports: ['websocket'],
-    reconnection: true,
-    reconnectionAttempts: 5
-  });
-
-  socket.on('connect', () => {
-    console.log('Socket.IO подключено (хост):', socket.id);
-    if (isHost) {
-      roomId = socket.id; // Используем socket.id как ID комнаты
-      peerIdSpan.textContent = roomId;
-      peerIdDisplay.style.display = 'block';
-      showDialog(["Поделитесь этим ID с другом для совместной игры: " + roomId]);
+    isHost = host;
+    if (socket) {
+        socket.disconnect();
     }
-  });
+    socket = io('https://neon-adventure-peerjs.onrender.com', {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5
+    });
 
-  socket.on('playerJoined', (playerId) => {
-    if (isHost) {
-      console.log('Клиент подключился к хосту:', playerId);
-      if (playerId === socket.id) {
-        console.warn('Хост пытается подключиться сам к себе, игнорируем');
-        return; // Игнорируем, если хост сам себя подключил
-      }
-      isCoopMode = true;
-      player2 = {
-        x: levels[currentLevel].startPos2.x,
-        y: levels[currentLevel].startPos2.y,
-        width: 30,
-        height: 30,
-        speed: 5,
-        direction: 'right',
-        keys: 0,
-        lives: 3,
-        hasSword: false,
-        invincible: false,
-        invincibleTimer: 0,
-        color: '#f00',
-        hasPotion: false,
-        damageMultiplier: 1,
-        catEars: false,
-        earAngle: 0,
-        tailAngle: 0,
-        isMoving: false,
-        id: 'player2',
-        keysPressed: {}
-      };
-      // Отправляем хосту подтверждение, что он готов
-      socket.emit('hostReady', roomId);
-    }
-  });
-
-  socket.on('clientReady', (clientData) => {
-    if (isHost) {
-      console.log('Клиент готов, данные получены:', clientData);
-      Object.assign(player2, clientData);
-      titleScreen.style.display = 'none';
-      menuBgm.pause();
-      loadLevel(1);
-      socket.emit('gameData', roomId, {
-        type: 'startGame',
-        level: currentLevel,
-        state: {
-          player: {...player},
-          player2: {...player2},
-          walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
+    socket.on('connect', () => {
+        console.log('Подключено к серверу:', socket.id);
+        if (isHost) {
+            roomId = socket.id;
+            peerIdSpan.textContent = roomId;
+            peerIdDisplay.style.display = 'block';
+            showDialog(["Ваш ID комнаты: " + roomId + ". Поделитесь им с другом!"]);
         }
-      });
-      console.log('Игра началась для хоста и клиента, отправлено gameData');
-      gameLoop();
-    }
-  });
+    });
 
-  socket.on('gameData', handlePeerData);
+    socket.on('playerJoined', (playerId) => {
+        if (isHost) {
+            console.log('Клиент подключился:', playerId);
+            if (playerId === socket.id) {
+                console.warn('Хост подключился сам к себе, игнорируем');
+                return;
+            }
+            isCoopMode = true;
+            player2 = {
+                x: levels[1].startPos2.x,
+                y: levels[1].startPos2.y,
+                width: 30,
+                height: 30,
+                speed: 5,
+                direction: 'right',
+                keys: 0,
+                lives: 3,
+                hasSword: false,
+                invincible: false,
+                invincibleTimer: 0,
+                color: '#f00',
+                hasPotion: false,
+                damageMultiplier: 1,
+                catEars: false,
+                earAngle: 0,
+                tailAngle: 0,
+                isMoving: false,
+                id: 'player2',
+                keysPressed: {}
+            };
+            titleScreen.style.display = 'none';
+            menuBgm.pause();
+            loadLevel(1);
+            socket.emit('gameData', {
+                type: 'startGame',
+                level: currentLevel,
+                state: {
+                    player: {...player},
+                    player2: {...player2},
+                    walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
+                }
+            });
+            console.log('Хост отправил startGame клиенту');
+            gameLoop();
+        }
+    });
 
-  socket.on('connect_error', (err) => {
-    console.error('Socket.IO ошибка (хост):', err);
-    showDialog(["Ошибка соединения. Попробуйте снова."]);
-  });
-}
-
-// Join cooperative game
-function joinCoop(peerId) {
-  roomId = peerId;
-
-  // Закрываем старое соединение, если оно существует
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-
-  socket = io('https://neon-adventure-peerjs.onrender.com', { // Замените на ваш домен
-    transports: ['websocket'],
-    reconnection: true,
-    reconnectionAttempts: 5
-  });
-
-  socket.on('connect', () => {
-    console.log('Socket.IO подключено (клиент):', socket.id);
-    console.log('Клиент пытается присоединиться к комнате:', roomId);
-    socket.emit('join', roomId);
-    isClientReady = false;
-  });
-
-  socket.on('hostReady', () => {
-    console.log('Хост готов, клиент отправляет своё состояние');
-    isClientReady = true;
-    const clientState = {
-      x: levels[currentLevel].startPos2.x,
-      y: levels[currentLevel].startPos2.y,
-      width: 30,
-      height: 30,
-      speed: 5,
-      direction: 'right',
-      keys: 0,
-      lives: 3,
-      hasSword: false,
-      invincible: false,
-      invincibleTimer: 0,
-      color: '#f00',
-      hasPotion: false,
-      damageMultiplier: 1,
-      catEars: false,
-      earAngle: 0,
-      tailAngle: 0,
-      isMoving: false,
-      id: 'player2',
-      keysPressed: {}
-    };
-    socket.emit('clientReady', clientState);
-  });
-
-  socket.on('gameData', (data) => {
-    console.log('Клиент получил данные:', data);
-    if (data.type === 'startGame') {
-      isCoopMode = true;
-      currentLevel = data.level;
-      Object.assign(player, data.state.player2); // Клиент становится player2
-      player2 = {...data.state.player}; // Хост становится player1
-      player.id = 'player2';
-      player.color = '#f00';
-      player2.id = 'player1';
-      player2.color = '#00f';
-      walls = data.state.walls;
-      keys = data.state.keys;
-      doors = data.state.doors;
-      npcs = data.state.npcs;
-      enemies = data.state.enemies;
-      chests = data.state.chests;
-      campfires = data.state.campfires;
-      flowers = data.state.flowers;
-      boss = data.state.boss;
-      gameObjects = data.state.gameObjects;
-      levelDisplay.textContent = currentLevel;
-      objectiveDisplay.textContent = levels[currentLevel].objective;
-      keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-      livesDisplay.textContent = player.lives;
-      titleScreen.style.display = 'none';
-      menuBgm.pause();
-      console.log('Клиент начал игру');
-      gameLoop();
-    } else {
-      handlePeerData(data);
-    }
-  });
-
-  socket.on('connect_error', (err) => {
-    console.error('Socket.IO ошибка (клиент):', err);
-    showDialog(["Не удалось подключиться. Проверьте ID."]);
-  });
-}
-
-// Handle peer data
-function handlePeerData(data) {
-    switch (data.type) {
-        case 'startGame':
+    socket.on('gameData', (data) => {
+        console.log('Получены данные:', data);
+        if (data.type === 'startGame' && !isHost) {
             isCoopMode = true;
             currentLevel = data.level;
-            Object.assign(player, data.state.player);
-            player2 = data.state.player2;
+            Object.assign(player, data.state.player2);
+            player2 = {...data.state.player};
+            player.id = 'player2';
+            player.color = '#f00';
+            player2.id = 'player1';
+            player2.color = '#00f';
             walls = data.state.walls;
             keys = data.state.keys;
             doors = data.state.doors;
@@ -1508,12 +1403,83 @@ function handlePeerData(data) {
             gameObjects = data.state.gameObjects;
             levelDisplay.textContent = currentLevel;
             objectiveDisplay.textContent = levels[currentLevel].objective;
-            keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+            keysDisplay.textContent = player.keys + player2.keys;
             livesDisplay.textContent = player.lives;
             titleScreen.style.display = 'none';
             menuBgm.pause();
+            console.log('Клиент начал игру');
             gameLoop();
-            break;
+        } else {
+            handlePeerData(data);
+        }
+    });
+
+    socket.on('connect_error', (err) => {
+        console.error('Ошибка соединения:', err);
+        showDialog(["Ошибка соединения. Попробуйте снова."]);
+    });
+}
+
+// Join cooperative game
+function joinCoop(peerId) {
+    roomId = peerId;
+    if (socket) {
+        socket.disconnect();
+    }
+    socket = io('https://neon-adventure-peerjs.onrender.com', {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5
+    });
+
+    socket.on('connect', () => {
+        console.log('Клиент подключён:', socket.id);
+        socket.emit('join', roomId);
+    });
+
+    socket.on('gameData', (data) => {
+        console.log('Клиент получил данные:', data);
+        if (data.type === 'startGame') {
+            isCoopMode = true;
+            currentLevel = data.level;
+            Object.assign(player, data.state.player2);
+            player2 = {...data.state.player};
+            player.id = 'player2';
+            player.color = '#f00';
+            player2.id = 'player1';
+            player2.color = '#00f';
+            walls = data.state.walls;
+            keys = data.state.keys;
+            doors = data.state.doors;
+            npcs = data.state.npcs;
+            enemies = data.state.enemies;
+            chests = data.state.chests;
+            campfires = data.state.campfires;
+            flowers = data.state.flowers;
+            boss = data.state.boss;
+            gameObjects = data.state.gameObjects;
+            levelDisplay.textContent = currentLevel;
+            objectiveDisplay.textContent = levels[currentLevel].objective;
+            keysDisplay.textContent = player.keys + player2.keys;
+            livesDisplay.textContent = player.lives;
+            titleScreen.style.display = 'none';
+            menuBgm.pause();
+            console.log('Клиент начал игру');
+            gameLoop();
+        } else {
+            handlePeerData(data);
+        }
+    });
+
+    socket.on('connect_error', (err) => {
+        console.error('Ошибка подключения клиента:', err);
+        showDialog(["Не удалось подключиться. Проверьте ID."]);
+    });
+}
+
+// Handle peer data
+function handlePeerData(data) {
+    switch (data.type) {
         case 'playerUpdate':
             if (data.playerId === 'player1' && player2) {
                 Object.assign(player2, data.player);
@@ -1670,7 +1636,6 @@ function handlePeerData(data) {
 
 // Main game loop
 function gameLoop() {
-console.log('Game loop started on client');
     if (titleScreen.style.display !== 'none' || gameOverScreen.style.display === 'flex' || 
         levelCompleteScreen.style.display === 'flex' || victoryScreen.style.display === 'flex' || 
         skinMenu.style.display === 'flex' || puzzleContainer.style.display === 'flex') {
@@ -1732,8 +1697,8 @@ restartVictoryBtn.addEventListener('click', () => {
 
 closeSkinMenuBtn.addEventListener('click', () => {
     skinMenu.style.display = 'none';
-    if (isCoopMode && conn) {
-        socket.emit({type: 'closeSkinMenu'});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {type: 'closeSkinMenu'});
     }
 });
 
@@ -1743,8 +1708,8 @@ skinOptions.forEach(option => {
         const catEars = option.dataset.catEars === 'true';
         player.color = color || player.color;
         if (catEars) player.catEars = true;
-        if (isCoopMode && conn) {
-            socket.emit({type: 'playerUpdate', player: {
+        if (isCoopMode && socket) {
+            socket.emit('gameData', {type: 'playerUpdate', player: {
                 color: player.color,
                 catEars: player.catEars
             }, playerId: player.id});
@@ -1757,8 +1722,8 @@ puzzlePieces.forEach(piece => {
         if (puzzleAttempt.length < 4) {
             puzzleAttempt.push(parseInt(piece.dataset.value));
             puzzleSequence.textContent = puzzleAttempt.join('-');
-            if (isCoopMode && conn) {
-                socket.emit({type: 'puzzleAttempt', value: parseInt(piece.dataset.value)});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'puzzleAttempt', value: parseInt(piece.dataset.value)});
             }
         }
     });
@@ -1773,15 +1738,15 @@ puzzleSubmit.addEventListener('click', () => {
             showDialog(["Головоломка решена! Вы получили зелье!"]);
             objectiveDisplay.textContent = "Пройти к двери";
             doors.forEach(door => door.locked = false);
-            if (isCoopMode && conn) {
-                socket.emit({type: 'puzzleSolved'});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'puzzleSolved'});
             }
         } else {
             puzzleAttempt = [];
             puzzleSequence.textContent = '';
             showDialog(["Неправильная последовательность. Попробуйте снова."]);
-            if (isCoopMode && conn) {
-                socket.emit({type: 'puzzleReset'});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', {type: 'puzzleReset'});
             }
         }
     }
