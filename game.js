@@ -1303,7 +1303,6 @@ function draw() {
     ctx.shadowBlur = 0;
 }
 
-// Initialize PeerJS for cooperative mode
 let socket = null;
 let roomId = null;
 
@@ -1394,24 +1393,6 @@ function joinCoop(peerId) {
     console.error('Socket.IO ошибка:', err);
     showDialog(["Не удалось подключиться. Проверьте ID."]);
   });
-}
-
-// Join cooperative game
-function joinCoop(peerId) {
-    peer = new Peer();
-    peer.on('open', () => {
-        conn = peer.connect(peerId);
-        conn.on('open', () => {
-            isCoopMode = true;
-            player = {...player, id: 'player2', color: '#f00'};
-            player2 = {...player, id: 'player1', color: '#00f'};
-            conn.on('data', handlePeerData);
-            // Wait for 'startGame' message to hide title screen and start game loop
-        });
-        conn.on('error', () => {
-            showDialog(["Не удалось подключиться. Проверьте ID."]);
-        });
-    });
 }
 
 // Handle peer data
