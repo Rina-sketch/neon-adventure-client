@@ -1450,7 +1450,7 @@ function joinCoop(peerId) {
 
   socket.on('gameData', (data) => {
     console.log('Клиент получил данные:', data);
-    if (data.type === 'startGame' && !isClientReady) {
+    if (data.type === 'startGame') {
       isCoopMode = true;
       currentLevel = data.level;
       Object.assign(player, data.state.player2); // Клиент становится player2
@@ -1475,6 +1475,7 @@ function joinCoop(peerId) {
       livesDisplay.textContent = player.lives;
       titleScreen.style.display = 'none';
       menuBgm.pause();
+      console.log('Клиент начал игру');
       gameLoop();
     } else {
       handlePeerData(data);
