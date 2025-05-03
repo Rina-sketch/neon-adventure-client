@@ -1307,7 +1307,7 @@ function draw() {
 function initPeer(host) {
     isHost = host;
     peer = new Peer({
-  host: 'YOUR_RENDER_DOMAIN', // Замените на ваш домен от Render, например, 'neon-adventure-peerjs.onrender.com'
+  host: 'neon-adventure-peerjs.onrender.com', // Замените на ваш домен от Render, например, 'neon-adventure-peerjs.onrender.com'
   port: 443,
   path: '/myapp',
   secure: true
