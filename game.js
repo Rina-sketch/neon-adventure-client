@@ -195,7 +195,7 @@ function initLevels() {
         walls: [
             {x: 0, y: 0, width: 800, height: 20},
             {x: 0, y: 0, width: 20, height: 600},
-            {x: 0, y: 580, width: 800, height: 20},
+            {x: 0, y: 1000, width: 800, height: 20},
             {x: 780, y: 0, width: 20, height: 600},
             {x: 200, y: 100, width: 400, height: 20},
             {x: 200, y: 100, width: 20, height: 200},
@@ -236,7 +236,7 @@ function initLevels() {
     
     levels[2] = {
         walls: [
-            {x: 0, y: 0, width: 800, height: 20},
+            {x: 0, y: 0, width: 0, height: 20},
             {x: 0, y: 0, width: 20, height: 600},
             {x: 0, y: 580, width: 800, height: 20},
             {x: 780, y: 0, width: 20, height: 600},
@@ -293,7 +293,7 @@ function initLevels() {
     
     levels[3] = {
         walls: [
-            {x: 0, y: 0, width: 800, height: 20},
+            {x: 0, y: 0, width: 0, height: 20},
             {x: 0, y: 0, width: 20, height: 600},
             {x: 0, y: 580, width: 800, height: 20},
             {x: 780, y: 0, width: 20, height: 600},
