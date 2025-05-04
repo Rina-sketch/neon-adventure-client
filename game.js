@@ -81,6 +81,7 @@ let isCoopMode = false;
 let peer = null;
 let conn = null;
 let isHost = false;
+attackCooldown = 0;
 
 // Input handling
 const keysPressed = {
