@@ -1448,39 +1448,39 @@ function joinCoop(peerId) {
     socket.emit('clientReady', clientState);
   });
 
-socket.on('gameData', (data) => {
+  socket.on('gameData', (data) => {
     console.log('Клиент получил данные:', data);
     if (data.type === 'startGame') {
-        isCoopMode = true;
-        currentLevel = data.level;
-        Object.assign(player, data.state.player2); // Клиент становится player2
-        player2 = {...data.state.player}; // Хост становится player1
-        player.id = 'player2';
-        player.color = '#f00';
-        player2.id = 'player1';
-        player2.color = '#00f';
-        walls = data.state.walls;
-        keys = data.state.keys;
-        doors = data.state.doors;
-        npcs = data.state.npcs;
-        enemies = data.state.enemies;
-        chests = data.state.chests;
-        campfires = data.state.campfires;
-        flowers = data.state.flowers;
-        boss = data.state.boss;
-        gameObjects = data.state.gameObjects;
-        levelDisplay.textContent = currentLevel;
-        objectiveDisplay.textContent = levels[currentLevel].objective;
-        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-        livesDisplay.textContent = player.lives;
-        titleScreen.style.display = 'none';
-        menuBgm.pause();
-        console.log('Клиент начал игру');
-        gameLoop();
+      isCoopMode = true;
+      currentLevel = data.level;
+      Object.assign(player, data.state.player2); // Клиент становится player2
+      player2 = {...data.state.player}; // Хост становится player1
+      player.id = 'player2';
+      player.color = '#f00';
+      player2.id = 'player1';
+      player2.color = '#00f';
+      walls = data.state.walls;
+      keys = data.state.keys;
+      doors = data.state.doors;
+      npcs = data.state.npcs;
+      enemies = data.state.enemies;
+      chests = data.state.chests;
+      campfires = data.state.campfires;
+      flowers = data.state.flowers;
+      boss = data.state.boss;
+      gameObjects = data.state.gameObjects;
+      levelDisplay.textContent = currentLevel;
+      objectiveDisplay.textContent = levels[currentLevel].objective;
+      keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+      livesDisplay.textContent = player.lives;
+      titleScreen.style.display = 'none';
+      menuBgm.pause();
+      console.log('Клиент начал игру');
+      gameLoop();
     } else {
-        handlePeerData(data);
+      handlePeerData(data);
     }
-});
+  });
 
   socket.on('connect_error', (err) => {
     console.error('Socket.IO ошибка (клиент):', err);
