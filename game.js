@@ -57,7 +57,7 @@ let player = {
     tailAngle: 0,
     isMoving: false,
     id: 'player1',
-    keysPressed: {}
+    keysPressed: {},
     attackCooldown: 0
 };
 let player2 = null;
