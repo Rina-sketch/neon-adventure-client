@@ -483,15 +483,15 @@ document.addEventListener('keydown', (e) => {
     if (e.code in keysPressed) {
         keysPressed[e.code] = true;
         player.keysPressed[e.code] = true;
-        if (isCoopMode && socket) {
-            socket.emit('gameData', roomId, {type: 'keyDown', code: e.code, playerId: player.id});
+        if (isCoopMode && conn) {
+            socket.emit({type: 'keyDown', code: e.code});
         }
     }
     
     if (e.code === 'KeyC' && skinMenu.style.display !== 'flex') {
         skinMenu.style.display = 'flex';
-        if (isCoopMode && socket) {
-            socket.emit('gameData', roomId, {type: 'openSkinMenu'});
+        if (isCoopMode && conn) {
+            socket.emit({type: 'openSkinMenu'});
         }
     }
 });
@@ -500,8 +500,8 @@ document.addEventListener('keyup', (e) => {
     if (e.code in keysPressed) {
         keysPressed[e.code] = false;
         player.keysPressed[e.code] = false;
-        if (isCoopMode && socket) {
-            socket.emit('gameData', roomId, {type: 'keyUp', code: e.code, playerId: player.id});
+        if (isCoopMode && conn) {
+            socket.emit({type: 'keyUp', code: e.code});
         }
     }
 });
@@ -569,31 +569,41 @@ function movePlayer(p) {
         }
     }
     
-    if (isCoopMode && socket) {
-        socket.emit('gameData', roomId, {
-            type: 'playerUpdate',
-            player: {
-                x: p.x,
-                y: p.y,
-                direction: p.direction,
-                isMoving: p.isMoving,
-                keys: p.keys,
-                lives: p.lives,
-                hasSword: p.hasSword,
-                invincible: p.invincible,
-                invincibleTimer: p.invincibleTimer,
-                color: p.color,
-                hasPotion: p.hasPotion,
-                damageMultiplier: p.damageMultiplier,
-                catEars: p.catEars,
-                earAngle: p.earAngle,
-                tailAngle: p.tailAngle
-            },
-            playerId: p.id
-        });
+    if (isCoopMode && conn) {
+        socket.emit({type: 'playerUpdate', player: {
+            x: p.x,
+            y: p.y,
+            direction: p.direction,
+            isMoving: p.isMoving,
+            keys: p.keys,
+            lives: p.lives,
+            hasSword: p.hasSword,
+            invincible: p.invincible,
+            invincibleTimer: p.invincibleTimer,
+            color: p.color,
+            hasPotion: p.hasPotion,
+            damageMultiplier: p.damageMultiplier,
+            catEars: p.catEars,
+            earAngle: p.earAngle,
+            tailAngle: p.tailAngle
+        }, playerId: p.id});
     }
 }
 
+// Check wall collisions
+function checkWallCollision(x, y, width, height) {
+    for (const wall of walls) {
+        if (x < wall.x + wall.width &&
+            x + width > wall.x &&
+            y < wall.y + wall.height &&
+            y + height > wall.y) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Check key collisions
 function checkKeyCollisions(p) {
     for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -606,42 +616,11 @@ function checkKeyCollisions(p) {
             key.collected = true;
             p.keys++;
             keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-            showDialog(["Ключ собран командой!"]);
+            showDialog(["Вы нашли ключ!"]);
             keys.splice(i, 1);
             i--;
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {
-                    type: 'keyCollected',
-                    keyIndex: i,
-                    playerId: p.id
-                });
-            }
-        }
-    }
-}
-
-// Check key collisions
-function checkChestCollisions(p) {
-    for (const chest of chests) {
-        if (!chest.opened &&
-            p.x < chest.x + chest.width &&
-            p.x + p.width > chest.x &&
-            p.y < chest.y + chest.height &&
-            p.y + p.height > chest.y) {
-            
-            chest.opened = true;
-            sfxChestOpen.currentTime = 0;
-            sfxChestOpen.play().catch(e => console.error('Ошибка воспроизведения звука открытия сундука:', e));
-            if (chest.contains === 'sword') {
-                p.hasSword = true;
-                showDialog(["Вы нашли меч! Атакуйте пробелом."]);
-            }
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {
-                    type: 'chestOpened',
-                    chestIndex: chests.indexOf(chest),
-                    playerId: p.id
-                });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'keyCollected', playerId: p.id, keyIndex: i});
             }
         }
     }
@@ -659,8 +638,8 @@ function checkDoorCollisions(p) {
                 if (currentLevel === 3 && (p.hasPotion || (player2 && player2.hasPotion))) {
                     door.locked = false;
                     showDialog(["Дверь открыта силой зелья!"]);
-                    if (isCoopMode && socket) {
-                        socket.emit('gameData', roomId, {type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
+                    if (isCoopMode && conn) {
+                        socket.emit({type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
                     }
                 } else if (p.keys > 0 || (player2 && player2.keys > 0)) {
                     door.locked = false;
@@ -668,16 +647,16 @@ function checkDoorCollisions(p) {
                     if (player2) player2.keys = Math.max(0, player2.keys - (1 - p.keys));
                     keysDisplay.textContent = p.keys + (player2 ? player2.keys : 0);
                     showDialog(["Дверь открыта!"]);
-                    if (isCoopMode && socket) {
-                        socket.emit('gameData', roomId, {type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
+                    if (isCoopMode && conn) {
+                        socket.emit({type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
                     }
                 } else {
                     showDialog(["Дверь заперта."]);
                 }
             } else {
                 levelCompleteScreen.style.display = 'flex';
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {type: 'levelComplete'});
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'levelComplete'});
                 }
             }
         }
@@ -694,8 +673,8 @@ function checkNPCCollisions(p) {
             
             if (npc.hasPuzzle && !p.hasPotion && !(player2 && player2.hasPotion)) {
                 puzzleContainer.style.display = 'flex';
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {type: 'openPuzzle'});
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'openPuzzle'});
                 }
             } else {
                 showDialog(npc.dialog);
@@ -719,14 +698,10 @@ function checkChestCollisions(p) {
             sfxChestOpen.play().catch(e => console.error('Ошибка воспроизведения звука открытия сундука:', e));
             if (chest.contains === 'sword') {
                 p.hasSword = true;
-                showDialog(["Команда нашла меч! Атакуйте пробелом."]);
+                showDialog(["Вы нашли меч! Атакуйте пробелом."]);
             }
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {
-                    type: 'chestOpened',
-                    chestIndex: chests.indexOf(chest),
-                    playerId: p.id
-                });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'chestOpened', chestIndex: chests.indexOf(chest), playerId: p.id});
             }
         }
     }
@@ -750,8 +725,8 @@ function checkEnemyCollisions(p) {
             
             if (p.lives <= 0) {
                 gameOverScreen.style.display = 'flex';
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {type: 'gameOver'});
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'gameOver'});
                 }
             } else {
                 showDialog(["Вы получили удар!"]);
@@ -764,8 +739,8 @@ function checkEnemyCollisions(p) {
                 p.y += (dy / distance) * 30;
                 p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
                 p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
                 }
             }
         }
@@ -788,8 +763,8 @@ function checkBossCollision(p) {
         
         if (p.lives <= 0) {
             gameOverScreen.style.display = 'flex';
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {type: 'gameOver'});
+            if (isCoopMode && conn) {
+                socket.emit({type: 'gameOver'});
             }
         } else {
             showDialog(["Босс атаковал вас!"]);
@@ -802,8 +777,8 @@ function checkBossCollision(p) {
             p.y += (dy / distance) * 50;
             p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
             p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
+            if (isCoopMode && conn) {
+                socket.emit({type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
             }
         }
     }
@@ -850,14 +825,9 @@ function attack(p) {
                 i--;
                 p.lives++;
                 livesDisplay.textContent = p.lives;
-                showDialog(["Враг повержен командой! +1 жизнь!"]);
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {
-                        type: 'enemyDefeated',
-                        enemyIndex: i,
-                        playerId: p.id,
-                        lives: p.lives
-                    });
+                showDialog(["Враг повержен! +1 жизнь!"]);
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'enemyDefeated', enemyIndex: i, playerId: p.id, lives: p.lives});
                 }
             }
         }
@@ -875,10 +845,10 @@ function attack(p) {
         if (boss.health <= 0) {
             bossDefeated = true;
             boss = null;
-            showDialog(["Босс побежден командой! Секретный сундук открыт!"]);
+            showDialog(["Босс побежден! Вы нашли секретный сундук!"]);
             victoryScreen.style.display = 'flex';
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, { type: 'bossDefeated' });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'bossDefeated'});
             }
         }
     }
@@ -911,8 +881,8 @@ function moveEnemies() {
             }
         }
     }
-    if (isCoopMode && socket) {
-        socket.emit('gameData', roomId, {type: 'enemiesUpdate', enemies});
+    if (isCoopMode && conn) {
+        socket.emit({type: 'enemiesUpdate', enemies});
     }
 }
 
@@ -946,8 +916,8 @@ function moveBoss() {
             dy: dy / distance,
             type: 'bossProjectile'
         });
-        if (isCoopMode && socket) {
-            socket.emit('gameData', roomId, {type: 'bossProjectile', x: boss.x + boss.width / 2, y: boss.y + boss.height / 2, dx: dx / distance, dy: dy / distance});
+        if (isCoopMode && conn) {
+            socket.emit({type: 'bossProjectile', x: boss.x + boss.width / 2, y: boss.y + boss.height / 2, dx: dx / distance, dy: dy / distance});
         }
     }
     
@@ -956,8 +926,8 @@ function moveBoss() {
         boss.y -= (dy / distance) * boss.speed * 2;
     }
     
-    if (isCoopMode && socket) {
-        socket.emit('gameData', roomId, {type: 'bossUpdate', boss});
+    if (isCoopMode && conn) {
+        socket.emit({type: 'bossUpdate', boss});
     }
 }
 
@@ -974,8 +944,8 @@ function moveProjectiles() {
             if (checkWallCollision(obj.x, obj.y, obj.width, obj.height)) {
                 gameObjects.splice(i, 1);
                 i--;
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {type: 'projectileRemoved', index: i});
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'projectileRemoved', index: i});
                 }
                 continue;
             }
@@ -994,8 +964,8 @@ function moveProjectiles() {
                     
                     if (p.lives <= 0) {
                         gameOverScreen.style.display = 'flex';
-                        if (isCoopMode && socket) {
-                            socket.emit('gameData', roomId, {type: 'gameOver'});
+                        if (isCoopMode && conn) {
+                            socket.emit({type: 'gameOver'});
                         }
                     } else {
                         showDialog(["Снаряд босса попал в вас!"]);
@@ -1008,15 +978,15 @@ function moveProjectiles() {
                         p.y += (dy / distance) * 50;
                         p.x = Math.max(0, Math.min(canvas.width - p.width, p.x));
                         p.y = Math.max(0, Math.min(canvas.height - p.height, p.y));
-                        if (isCoopMode && socket) {
-                            socket.emit('gameData', roomId, {type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
+                        if (isCoopMode && conn) {
+                            socket.emit({type: 'playerHit', playerId: p.id, lives: p.lives, x: p.x, y: p.y});
                         }
                     }
                     
                     gameObjects.splice(i, 1);
                     i--;
-                    if (isCoopMode && socket) {
-                        socket.emit('gameData', roomId, {type: 'projectileRemoved', index: i});
+                    if (isCoopMode && conn) {
+                        socket.emit({type: 'projectileRemoved', index: i});
                     }
                     break;
                 }
@@ -1025,14 +995,14 @@ function moveProjectiles() {
             if (obj.x < 0 || obj.x > canvas.width || obj.y < 0 || obj.y > canvas.height) {
                 gameObjects.splice(i, 1);
                 i--;
-                if (isCoopMode && socket) {
-                    socket.emit('gameData', roomId, {type: 'projectileRemoved', index: i});
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'projectileRemoved', index: i});
                 }
             }
         }
     }
-    if (isCoopMode && socket) {
-        socket.emit('gameData', roomId, {type: 'projectilesUpdate', gameObjects});
+    if (isCoopMode && conn) {
+        socket.emit({type: 'projectilesUpdate', gameObjects});
     }
 }
 
@@ -1050,8 +1020,8 @@ function showDialog(messages) {
         } else {
             dialog.style.display = 'none';
         }
-        if (isCoopMode && socket) {
-            socket.emit('gameData', roomId, {type: 'dialogAdvance', messages});
+        if (isCoopMode && conn) {
+            socket.emit({type: 'dialogAdvance', messages});
         }
     };
     
@@ -1063,142 +1033,7 @@ function showDialog(messages) {
         if (opacity >= 1) clearInterval(fadeIn);
     }, 50);
 }
-function loadLevel(levelNum) {
-    currentLevel = levelNum;
-    const level = levels[levelNum];
-    
-    player.x = level.startPos.x;
-    player.y = level.startPos.y;
-    player.keys = 0;
-    player.invincible = false;
-    player.invincibleTimer = 0;
-    if (levelNum === 1) {
-        player.hasSword = false;
-        player.hasPotion = false;
-        player.damageMultiplier = 1;
-        player.catEars = false;
-        bossDefeated = false;
-    }
-    
-    if (isCoopMode && player2) {
-        player2.x = level.startPos2.x;
-        player2.y = level.startPos2.y;
-        player2.keys = 0;
-        player2.invincible = false;
-        player2.invincibleTimer = 0;
-        if (levelNum === 1) {
-            player2.hasSword = false;
-            player2.hasPotion = false;
-            player2.damageMultiplier = 1;
-            player2.catEars = false;
-        }
-    }
-    
-    walls = [...level.walls];
-    keys = level.keys.map(key => ({...key}));
-    doors = level.doors.map(door => {
-        if (levelNum === 3) {
-            return {...door, locked: !player.hasPotion && !(player2 && player2.hasPotion)};
-        }
-        return {...door};
-    });
-    npcs = level.npcs.map(npc => ({...npc}));
-    enemies = level.enemies.map(enemy => ({...enemy}));
-    chests = level.chests.map(chest => ({...chest}));
-    campfires = level.campfires.map(campfire => ({...campfire}));
-    flowers = level.flowers.map(flower => ({...flower}));
-    boss = level.boss && !bossDefeated ? {...level.boss} : null;
-    gameObjects = [];
-    
-    levelDisplay.textContent = levelNum;
-    objectiveDisplay.textContent = level.objective;
-    keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-    livesDisplay.textContent = player.lives;
-    
-    dialog.style.display = 'none';
-    levelCompleteScreen.style.display = 'none';
-    gameOverScreen.style.display = 'none';
-    victoryScreen.style.display = 'none';
-    skinMenu.style.display = 'none';
-    puzzleContainer.style.display = 'none';
-    
-    if (levelNum === 3) {
-        puzzleSolution = [4, 2, 1, 3];
-        puzzleAttempt = [];
-        puzzleSequence.textContent = '';
-        
-        if (player.hasPotion || (player2 && player2.hasPotion)) {
-            objectiveDisplay.textContent = "Пройти к двери";
-        }
-    }
-    
-    playBackgroundMusic();
-    
-    if (isCoopMode && socket) {
-        socket.emit('gameData', roomId, {type: 'loadLevel', levelNum, state: {
-            player: {...player},
-            player2: player2 ? {...player2} : null,
-            walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
-        }});
-    }
-}
 
-closeSkinMenuBtn.addEventListener('click', () => {
-    skinMenu.style.display = 'none';
-    if (isCoopMode && socket) {
-        socket.emit('gameData', roomId, {type: 'closeSkinMenu'});
-    }
-});
-
-skinOptions.forEach(option => {
-    option.addEventListener('click', () => {
-        const color = option.dataset.color;
-        const catEars = option.dataset.catEars === 'true';
-        player.color = color || player.color;
-        if (catEars) player.catEars = true;
-        if (isCoopMode && socket) {
-            socket.emit('gameData', roomId, {type: 'playerUpdate', player: {
-                color: player.color,
-                catEars: player.catEars
-            }, playerId: player.id});
-        }
-    });
-});
-
-puzzlePieces.forEach(piece => {
-    piece.addEventListener('click', () => {
-        if (puzzleAttempt.length < 4) {
-            puzzleAttempt.push(parseInt(piece.dataset.value));
-            puzzleSequence.textContent = puzzleAttempt.join('-');
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {type: 'puzzleAttempt', value: parseInt(piece.dataset.value)});
-            }
-        }
-    });
-});
-
-puzzleSubmit.addEventListener('click', () => {
-    if (puzzleAttempt.length === 4) {
-        if (puzzleAttempt.every((val, i) => val === puzzleSolution[i])) {
-            player.hasPotion = true;
-            if (player2) player2.hasPotion = true;
-            puzzleContainer.style.display = 'none';
-            showDialog(["Головоломка решена! Вы получили зелье!"]);
-            objectiveDisplay.textContent = "Пройти к двери";
-            doors.forEach(door => door.locked = false);
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {type: 'puzzleSolved'});
-            }
-        } else {
-            puzzleAttempt = [];
-            puzzleSequence.textContent = '';
-            showDialog(["Неправильная последовательность. Попробуйте снова."]);
-            if (isCoopMode && socket) {
-                socket.emit('gameData', roomId, {type: 'puzzleReset'});
-            }
-        }
-    }
-});
 // Convert HEX to RGB
 function hexToRgb(hex) {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -1659,12 +1494,8 @@ function handlePeerData(data) {
         case 'startGame':
             isCoopMode = true;
             currentLevel = data.level;
-            Object.assign(player, data.state.player2); // Клиент становится player2
-            player2 = {...data.state.player}; // Хост становится player1
-            player.id = 'player2';
-            player.color = '#f00';
-            player2.id = 'player1';
-            player2.color = '#00f';
+            Object.assign(player, data.state.player);
+            player2 = data.state.player2;
             walls = data.state.walls;
             keys = data.state.keys;
             doors = data.state.doors;
@@ -1681,7 +1512,6 @@ function handlePeerData(data) {
             livesDisplay.textContent = player.lives;
             titleScreen.style.display = 'none';
             menuBgm.pause();
-            console.log('Клиент начал игру');
             gameLoop();
             break;
         case 'playerUpdate':
@@ -1711,7 +1541,6 @@ function handlePeerData(data) {
                 }
                 keys.splice(data.keyIndex, 1);
                 keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-                showDialog(["Ключ собран командой!"]);
             }
             break;
         case 'doorUnlocked':
@@ -1725,7 +1554,6 @@ function handlePeerData(data) {
                 } else {
                     player.hasSword = true;
                 }
-                showDialog(["Команда нашла меч! Атакуйте пробелом."]);
             }
             break;
         case 'enemyDefeated':
@@ -1736,13 +1564,11 @@ function handlePeerData(data) {
                 player.lives = data.lives;
             }
             livesDisplay.textContent = player.lives;
-            showDialog(["Враг повержен командой! +1 жизнь!"]);
             break;
         case 'bossDefeated':
             bossDefeated = true;
             boss = null;
             victoryScreen.style.display = 'flex';
-            showDialog(["Босс побежден командой! Секретный сундук открыт!"]);
             break;
         case 'playerHit':
             if (data.playerId === 'player2' && player2) {
