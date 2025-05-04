@@ -856,7 +856,8 @@ function attack(p) {
 
 // Move enemies
 function moveEnemies() {
-    if (!isHost) return; // Only host updates enemies
+    // Враги обновляются только хостом в кооперативе или в одиночном режиме
+    if (isCoopMode && !isHost) return;
     for (const enemy of enemies) {
         const target = player.lives > 0 ? player : (player2 && player2.lives > 0 ? player2 : null);
         if (!target) continue;
@@ -870,18 +871,17 @@ function moveEnemies() {
         }
         
         if (enemy.active) {
-            if (distance > 0) {
-                enemy.x += (dx / distance) * enemy.speed;
-                enemy.y += (dy / distance) * enemy.speed;
-            }
+            const newX = enemy.x + (dx / distance) * enemy.speed;
+            const newY = enemy.y + (dy / distance) * enemy.speed;
             
-            if (checkWallCollision(enemy.x, enemy.y, enemy.width, enemy.height)) {
-                enemy.x -= (dx / distance) * enemy.speed * 2;
-                enemy.y -= (dy / distance) * enemy.speed * 2;
+            // Проверяем, не столкнется ли враг со стеной
+            if (!checkWallCollision(newX, newY, enemy.width, enemy.height)) {
+                enemy.x = newX;
+                enemy.y = newY;
             }
         }
     }
-    if (isCoopMode && conn) {
+    if (isCoopMode && isHost) {
         socket.emit({type: 'enemiesUpdate', enemies});
     }
 }
@@ -1789,4 +1789,27 @@ puzzleSubmit.addEventListener('click', () => {
 
 // Initialize game
 initLevels();
-menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+//menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+singleBtn.addEventListener('click', () => {
+    isCoopMode = false;
+    titleScreen.style.display = 'none';
+    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+    menuBgm.pause(); // Останавливаем после старта игры
+    loadLevel(1);
+    gameLoop();
+});
+
+coopBtn.addEventListener('click', () => {
+    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+    initPeer(true);
+});
+
+joinCoopBtn.addEventListener('click', () => {
+    const peerId = coopIdInput.value.trim();
+    if (!peerId) {
+        showDialog(["Введите ID хоста!"]);
+        return;
+    }
+    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+    joinCoop(peerId);
+});
