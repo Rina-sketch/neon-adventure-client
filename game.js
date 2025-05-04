@@ -569,41 +569,31 @@ function movePlayer(p) {
         }
     }
     
-    if (isCoopMode && conn) {
-        socket.emit({type: 'playerUpdate', player: {
-            x: p.x,
-            y: p.y,
-            direction: p.direction,
-            isMoving: p.isMoving,
-            keys: p.keys,
-            lives: p.lives,
-            hasSword: p.hasSword,
-            invincible: p.invincible,
-            invincibleTimer: p.invincibleTimer,
-            color: p.color,
-            hasPotion: p.hasPotion,
-            damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars,
-            earAngle: p.earAngle,
-            tailAngle: p.tailAngle
-        }, playerId: p.id});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', roomId, {
+            type: 'playerUpdate',
+            player: {
+                x: p.x,
+                y: p.y,
+                direction: p.direction,
+                isMoving: p.isMoving,
+                keys: p.keys,
+                lives: p.lives,
+                hasSword: p.hasSword,
+                invincible: p.invincible,
+                invincibleTimer: p.invincibleTimer,
+                color: p.color,
+                hasPotion: p.hasPotion,
+                damageMultiplier: p.damageMultiplier,
+                catEars: p.catEars,
+                earAngle: p.earAngle,
+                tailAngle: p.tailAngle
+            },
+            playerId: p.id
+        });
     }
 }
 
-// Check wall collisions
-function checkWallCollision(x, y, width, height) {
-    for (const wall of walls) {
-        if (x < wall.x + wall.width &&
-            x + width > wall.x &&
-            y < wall.y + wall.height &&
-            y + height > wall.y) {
-            return true;
-        }
-    }
-    return false;
-}
-
-// Check key collisions
 function checkKeyCollisions(p) {
     for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -619,8 +609,39 @@ function checkKeyCollisions(p) {
             showDialog(["Вы нашли ключ!"]);
             keys.splice(i, 1);
             i--;
-            if (isCoopMode && conn) {
-                socket.emit({type: 'keyCollected', playerId: p.id, keyIndex: i});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', roomId, {
+                    type: 'keyCollected',
+                    keyIndex: i,
+                    playerId: p.id
+                });
+            }
+        }
+    }
+}
+
+// Check key collisions
+function checkChestCollisions(p) {
+    for (const chest of chests) {
+        if (!chest.opened &&
+            p.x < chest.x + chest.width &&
+            p.x + p.width > chest.x &&
+            p.y < chest.y + chest.height &&
+            p.y + p.height > chest.y) {
+            
+            chest.opened = true;
+            sfxChestOpen.currentTime = 0;
+            sfxChestOpen.play().catch(e => console.error('Ошибка воспроизведения звука открытия сундука:', e));
+            if (chest.contains === 'sword') {
+                p.hasSword = true;
+                showDialog(["Вы нашли меч! Атакуйте пробелом."]);
+            }
+            if (isCoopMode && socket) {
+                socket.emit('gameData', roomId, {
+                    type: 'chestOpened',
+                    chestIndex: chests.indexOf(chest),
+                    playerId: p.id
+                });
             }
         }
     }
@@ -826,8 +847,13 @@ function attack(p) {
                 p.lives++;
                 livesDisplay.textContent = p.lives;
                 showDialog(["Враг повержен! +1 жизнь!"]);
-                if (isCoopMode && conn) {
-                    socket.emit({type: 'enemyDefeated', enemyIndex: i, playerId: p.id, lives: p.lives});
+                if (isCoopMode && socket) {
+                    socket.emit('gameData', roomId, {
+                        type: 'enemyDefeated',
+                        enemyIndex: i,
+                        playerId: p.id,
+                        lives: p.lives
+                    });
                 }
             }
         }
@@ -847,8 +873,8 @@ function attack(p) {
             boss = null;
             showDialog(["Босс побежден! Вы нашли секретный сундук!"]);
             victoryScreen.style.display = 'flex';
-            if (isCoopMode && conn) {
-                socket.emit({type: 'bossDefeated'});
+            if (isCoopMode && socket) {
+                socket.emit('gameData', roomId, { type: 'bossDefeated' });
             }
         }
     }
@@ -1494,8 +1520,12 @@ function handlePeerData(data) {
         case 'startGame':
             isCoopMode = true;
             currentLevel = data.level;
-            Object.assign(player, data.state.player);
-            player2 = data.state.player2;
+            Object.assign(player, data.state.player2); // Клиент становится player2
+            player2 = {...data.state.player}; // Хост становится player1
+            player.id = 'player2';
+            player.color = '#f00';
+            player2.id = 'player1';
+            player2.color = '#00f';
             walls = data.state.walls;
             keys = data.state.keys;
             doors = data.state.doors;
@@ -1512,6 +1542,7 @@ function handlePeerData(data) {
             livesDisplay.textContent = player.lives;
             titleScreen.style.display = 'none';
             menuBgm.pause();
+            console.log('Клиент начал игру');
             gameLoop();
             break;
         case 'playerUpdate':
@@ -1541,6 +1572,7 @@ function handlePeerData(data) {
                 }
                 keys.splice(data.keyIndex, 1);
                 keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+                showDialog(["Ключ собран командой!"]);
             }
             break;
         case 'doorUnlocked':
@@ -1554,6 +1586,7 @@ function handlePeerData(data) {
                 } else {
                     player.hasSword = true;
                 }
+                showDialog(["Команда нашла меч! Атакуйте пробелом."]);
             }
             break;
         case 'enemyDefeated':
@@ -1564,11 +1597,13 @@ function handlePeerData(data) {
                 player.lives = data.lives;
             }
             livesDisplay.textContent = player.lives;
+            showDialog(["Враг повержен командой! +1 жизнь!"]);
             break;
         case 'bossDefeated':
             bossDefeated = true;
             boss = null;
             victoryScreen.style.display = 'flex';
+            showDialog(["Босс побежден командой! Секретный сундук открыт!"]);
             break;
         case 'playerHit':
             if (data.playerId === 'player2' && player2) {
