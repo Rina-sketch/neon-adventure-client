@@ -38,10 +38,26 @@ const sfxChestOpen = document.getElementById('chest-sound');
 // Game variables
 let currentLevel = 1;
 let player = {
-    x: 50, y: 50, width: 30, height: 30, speed: 5, direction: 'right',
-    keys: 0, lives: 3, hasSword: false, invincible: false, invincibleTimer: 0,
-    color: '#00f', hasPotion: false, damageMultiplier: 1, catEars: false,
-    earAngle: 0, tailAngle: 0, isMoving: false, id: 'player1', keysPressed: {}
+    x: 50,
+    y: 50,
+    width: 30,
+    height: 30,
+    speed: 5,
+    direction: 'right',
+    keys: 0,
+    lives: 3,
+    hasSword: false,
+    invincible: false,
+    invincibleTimer: 0,
+    color: '#00f',
+    hasPotion: false,
+    damageMultiplier: 1,
+    catEars: false,
+    earAngle: 0,
+    tailAngle: 0,
+    isMoving: false,
+    id: 'player1',
+    keysPressed: {}
 };
 let player2 = null;
 let levels = [];
