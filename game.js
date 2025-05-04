@@ -58,6 +58,7 @@ let player = {
     isMoving: false,
     id: 'player1',
     keysPressed: {}
+    attackCooldown: 0
 };
 let player2 = null;
 let levels = [];
@@ -389,6 +390,7 @@ function loadLevel(levelNum) {
     player.keys = 0;
     player.invincible = false;
     player.invincibleTimer = 0;
+    player.attackCooldown = 0;
     if (levelNum === 1) {
         player.hasSword = false;
         player.hasPotion = false;
@@ -403,6 +405,7 @@ function loadLevel(levelNum) {
         player2.keys = 0;
         player2.invincible = false;
         player2.invincibleTimer = 0;
+        player2.attackCooldown = 0;
         if (levelNum === 1) {
             player2.hasSword = false;
             player2.hasPotion = false;
@@ -568,6 +571,9 @@ function movePlayer(p) {
             p.invincible = false;
         }
     }
+    if (p.attackCooldown > 0) {
+        p.attackCooldown--; // Уменьшаем таймер атаки
+    }
     
     if (isCoopMode && conn) {
         socket.emit({type: 'playerUpdate', player: {
@@ -585,7 +591,8 @@ function movePlayer(p) {
             damageMultiplier: p.damageMultiplier,
             catEars: p.catEars,
             earAngle: p.earAngle,
-            tailAngle: p.tailAngle
+            tailAngle: p.tailAngle,
+            attackCooldown: p.attackCooldown
         }, playerId: p.id});
     }
 }
@@ -786,6 +793,10 @@ function checkBossCollision(p) {
 
 // Player attack
 function attack(p) {
+    if (p.attackCooldown > 0) return; // Игрок не может атаковать, если задержка активна
+    
+    p.attackCooldown = 30; // Устанавливаем задержку в 30 кадров (примерно 0.5 секунды при 60 FPS)
+    
     const attackRange = 40;
     let attackX = p.x;
     let attackY = p.y;
@@ -842,6 +853,7 @@ function attack(p) {
         
         sfxHitBoss.play();
         boss.health -= 1;
+        console.log(`Босс получил урон, здоровье: ${boss.health}`);
         if (boss.health <= 0) {
             bossDefeated = true;
             boss = null;
@@ -850,6 +862,9 @@ function attack(p) {
             if (isCoopMode && conn) {
                 socket.emit({type: 'bossDefeated'});
             }
+        }
+        if (isCoopMode && conn) {
+            socket.emit({type: 'bossUpdate', boss});
         }
     }
 }
@@ -888,7 +903,8 @@ function moveEnemies() {
 
 // Move boss
 function moveBoss() {
-    if (!isHost || !boss || !boss.active) return; // Only host updates boss
+    if (isCoopMode && !isHost) return; // Только хост обновляет босса в кооперативе
+    if (!boss || !boss.active) return;
     
     if (boss.attackCooldown > 0) {
         boss.attackCooldown--;
@@ -901,9 +917,13 @@ function moveBoss() {
     const dy = target.y - boss.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    if (distance > 150) {
-        boss.x += (dx / distance) * boss.speed;
-        boss.y += (dy / distance) * boss.speed;
+    if (distance > 200) { // Увеличиваем расстояние до 200
+        const newX = boss.x + (dx / distance) * boss.speed;
+        const newY = boss.y + (dy / distance) * boss.speed;
+        if (!checkWallCollision(newX, newY, boss.width, boss.height)) {
+            boss.x = newX;
+            boss.y = newY;
+        }
     } else if (boss.attackCooldown === 0) {
         boss.attackCooldown = 60;
         gameObjects.push({
@@ -916,21 +936,16 @@ function moveBoss() {
             dy: dy / distance,
             type: 'bossProjectile'
         });
-        if (isCoopMode && conn) {
+        console.log(`Босс атакует! Снаряд на (${boss.x}, ${boss.y})`);
+        if (isCoopMode && isHost) {
             socket.emit({type: 'bossProjectile', x: boss.x + boss.width / 2, y: boss.y + boss.height / 2, dx: dx / distance, dy: dy / distance});
         }
     }
     
-    if (checkWallCollision(boss.x, boss.y, boss.width, boss.height)) {
-        boss.x -= (dx / distance) * boss.speed * 2;
-        boss.y -= (dy / distance) * boss.speed * 2;
-    }
-    
-    if (isCoopMode && conn) {
+    if (isCoopMode && isHost) {
         socket.emit({type: 'bossUpdate', boss});
     }
 }
-
 // Move projectiles
 function moveProjectiles() {
     if (!isHost) return; // Only host updates projectiles
@@ -1643,6 +1658,7 @@ function handlePeerData(data) {
         case 'bossUpdate':
             if (boss) {
                 Object.assign(boss, data.boss);
+                console.log(`Получено обновление босса: здоровье=${boss.health}`);
             }
             break;
         case 'projectilesUpdate':
