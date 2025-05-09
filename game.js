@@ -557,17 +557,6 @@ function movePlayer(p) {
     }
 }
 
-// Корректировки от хоста
-if (isHost) {
-    setInterval(() => {
-        if (isCoopMode && socket) {
-            socket.emit('stateCorrection', {
-                player1: { x: player.x, y: player.y, direction: player.direction },
-                player2: player2 ? { x: player2.x, y: player2.y, direction: player2.direction } : null
-            });
-        }
-    }, 200);
-}
 
 socket.on('stateCorrection', (data) => {
     if (data.player2 && player.id === 'player2') {
@@ -1313,29 +1302,41 @@ let isClientReady = false;
 
 // Initialize Socket.IO for cooperative mode
 function initPeer(host) {
-  isHost = host;
+    isHost = host;
 
-  // Закрываем старое соединение, если оно существует
-  if (socket) {
-    socket.disconnect();
-    socket = null;
-  }
-
-  socket = io('https://neon-adventure-peerjs.onrender.com', { // Замените на ваш домен
-    transports: ['websocket'],
-    reconnection: true,
-    reconnectionAttempts: 5
-  });
-
-  socket.on('connect', () => {
-    console.log('Socket.IO подключено (хост):', socket.id);
-    if (isHost) {
-      roomId = socket.id; // Используем socket.id как ID комнаты
-      peerIdSpan.textContent = roomId;
-      peerIdDisplay.style.display = 'block';
-      showDialog(["Поделитесь этим ID с другом для совместной игры: " + roomId]);
+    // Закрываем старое соединение, если оно существует
+    if (socket) {
+        socket.disconnect();
+        socket = null;
     }
-  });
+
+    socket = io('https://neon-adventure-peerjs.onrender.com', {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5
+    });
+
+    // Добавляем setInterval для отправки корректировок, если это хост
+    if (host) {
+        setInterval(() => {
+            if (isCoopMode && socket) {
+                socket.emit('stateCorrection', {
+                    player1: { x: player.x, y: player.y, direction: player.direction },
+                    player2: player2 ? { x: player2.x, y: player2.y, direction: player2.direction } : null
+                });
+            }
+        }, 200);
+    }
+
+    socket.on('connect', () => {
+        console.log('Socket.IO подключено (хост):', socket.id);
+        if (isHost) {
+            roomId = socket.id;
+            peerIdSpan.textContent = roomId;
+            peerIdDisplay.style.display = 'block';
+            showDialog(["Поделитесь этим ID с другом для совместной игры: " + roomId]);
+        }
+    });
 
   socket.on('playerJoined', (playerId) => {
     if (isHost) {
