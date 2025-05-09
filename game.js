@@ -213,7 +213,7 @@ function initLevels() {
         npcs: [
             {
                 x: 100, y: 100, width: 30, height: 30, 
-                dialog: ["Привет, искатель приключений!", "Достань ключ, чтобы открыть дверь на следующий уровень.", "(On Mac: CMD + T | On Windows: CTRL + T) Нажми C, чтобы открыть меню скинов."],
+                dialog: ["Привет, искатель приключений!", "Достань ключ, чтобы открыть дверь на следующий уровень.", "Нажми C, чтобы открыть меню скинов."],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -266,7 +266,7 @@ function initLevels() {
         npcs: [
             {
                 x: 100, y: 500, width: 30, height: 30, 
-                dialog: ["Этот лабиринт полон ловушек!", "Тебе нужно собрать 2 ключа.", "Остерегайся новых врагов!", "Нажми C, чтобы открыть меню скинов."],
+                dialog: ["Этот лабиринт полон ловушек!", "Тебе нужно собрать 2 ключа.", "Остерегайся врагов!"],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -313,7 +313,7 @@ function initLevels() {
         npcs: [
             {
                 x: 400, y: 100, width: 30, height: 30, 
-                dialog: ["Реши мою головоломку!", "Последовательность: 4-2-1-3", "Удачи, герой!", "Нажми C, чтобы открыть меню скинов."],
+                dialog: ["Удачи, герой!"],
                 dialogIndex: 0,
                 hasPuzzle: true,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
@@ -353,7 +353,7 @@ function initLevels() {
         npcs: [
             {
                 x: 50, y: 300, width: 30, height: 30, 
-                dialog: ["Спаси меня, герой!", "Босса нужно ударить 5 раз!", "Нажми C, чтобы открыть меню скинов."],
+                dialog: ["Спаси меня, герой!"],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -374,7 +374,7 @@ function initLevels() {
             attackCooldown: 0,
             active: true
         },
-        objective: "Победите босса (5 ударов)",
+        objective: "Победите босса",
         startPos: {x: 400, y: 500},
         startPos2: {x: 450, y: 500},
         background: 'level4-bg'
@@ -511,68 +511,91 @@ document.addEventListener('keyup', (e) => {
 });
 
 // Move player
-let lastUpdateTime = 0;
-
 function movePlayer(p) {
     let newX = p.x;
     let newY = p.y;
     p.isMoving = false;
-
-    if (p.keysPressed.ArrowUp) { newY -= p.speed; p.direction = 'up'; p.isMoving = true; }
-    if (p.keysPressed.ArrowDown) { newY += p.speed; p.direction = 'down'; p.isMoving = true; }
-    if (p.keysPressed.ArrowLeft) { newX -= p.speed; p.direction = 'left'; p.isMoving = true; }
-    if (p.keysPressed.ArrowRight) { newX += p.speed; p.direction = 'right'; p.isMoving = true; }
-
+    
+    if (p.keysPressed.ArrowUp) {
+        newY -= p.speed;
+        p.direction = 'up';
+        p.isMoving = true;
+    }
+    if (p.keysPressed.ArrowDown) {
+        newY += p.speed;
+        p.direction = 'down';
+        p.isMoving = true;
+    }
+    if (p.keysPressed.ArrowLeft) {
+        newX -= p.speed;
+        p.direction = 'left';
+        p.isMoving = true;
+    }
+    if (p.keysPressed.ArrowRight) {
+        newX += p.speed;
+        p.direction = 'right';
+        p.isMoving = true;
+    }
+    
     if (p.isMoving) {
-        if (!checkWallCollision(newX, p.y, p.width, p.height)) {
+        if (checkWallCollision(newX, p.y, p.width, p.height)) {
+            if (!checkWallCollision(p.x, newY, p.width, p.height)) {
+                p.y = newY;
+            }
+        } else if (checkWallCollision(p.x, newY, p.width, p.height)) {
             p.x = newX;
-        }
-        if (!checkWallCollision(p.x, newY, p.width, p.height)) {
+        } else {
+            p.x = newX;
             p.y = newY;
         }
     }
-
+    
+    if (p.catEars) {
+        p.earAngle = Math.sin(frameCount * 0.1) * 0.2;
+        p.tailAngle = p.isMoving ? Math.sin(frameCount * 0.2) * 0.3 : 0;
+    }
+    
     checkKeyCollisions(p);
     checkDoorCollisions(p);
     checkNPCCollisions(p);
     checkChestCollisions(p);
     checkEnemyCollisions(p);
     if (boss) checkBossCollision(p);
-
-    if (p.keysPressed.Space && p.hasSword) attack(p);
-
+    
+    if (p.keysPressed.Space && p.hasSword) {
+        attack(p);
+    }
+    
     if (p.invincible) {
         p.invincibleTimer--;
-        if (p.invincibleTimer <= 0) p.invincible = false;
+        if (p.invincibleTimer <= 0) {
+            p.invincible = false;
+        }
     }
-    if (p.attackCooldown > 0) p.attackCooldown--;
-
-    const now = Date.now();
-    if (isCoopMode && socket && now - lastUpdateTime >= 100) {
-        socket.emit('playerUpdate', {
-            player: { x: p.x, y: p.y, direction: p.direction, isMoving: p.isMoving },
-            playerId: p.id
-        });
-        lastUpdateTime = now;
+    if (p.attackCooldown > 0) {
+        p.attackCooldown--; // Уменьшаем таймер атаки
     }
-}
-
-
-socket.on('stateCorrection', (data) => {
-    if (data.player2 && player.id === 'player2') {
-        player.x = lerp(player.x, data.player2.x, 0.1);
-        player.y = lerp(player.y, data.player2.y, 0.1);
-        player.direction = data.player2.direction;
+    
+    if (isCoopMode && conn) {
+        socket.emit({type: 'playerUpdate', player: {
+            x: p.x,
+            y: p.y,
+            direction: p.direction,
+            isMoving: p.isMoving,
+            keys: p.keys,
+            lives: p.lives,
+            hasSword: p.hasSword,
+            invincible: p.invincible,
+            invincibleTimer: p.invincibleTimer,
+            color: p.color,
+            hasPotion: p.hasPotion,
+            damageMultiplier: p.damageMultiplier,
+            catEars: p.catEars,
+            earAngle: p.earAngle,
+            tailAngle: p.tailAngle,
+            attackCooldown: p.attackCooldown
+        }, playerId: p.id});
     }
-    if (data.player1 && player.id === 'player1' && player2) {
-        player2.x = lerp(player2.x, data.player1.x, 0.1);
-        player2.y = lerp(player2.y, data.player1.y, 0.1);
-        player2.direction = data.player1.direction;
-    }
-});
-
-function lerp(a, b, t) {
-    return a + (b - a) * t;
 }
 
 // Check wall collisions
@@ -1302,41 +1325,29 @@ let isClientReady = false;
 
 // Initialize Socket.IO for cooperative mode
 function initPeer(host) {
-    isHost = host;
+  isHost = host;
 
-    // Закрываем старое соединение, если оно существует
-    if (socket) {
-        socket.disconnect();
-        socket = null;
+  // Закрываем старое соединение, если оно существует
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+
+  socket = io('https://neon-adventure-peerjs.onrender.com', { // Замените на ваш домен
+    transports: ['websocket'],
+    reconnection: true,
+    reconnectionAttempts: 5
+  });
+
+  socket.on('connect', () => {
+    console.log('Socket.IO подключено (хост):', socket.id);
+    if (isHost) {
+      roomId = socket.id; // Используем socket.id как ID комнаты
+      peerIdSpan.textContent = roomId;
+      peerIdDisplay.style.display = 'block';
+      showDialog(["Поделитесь этим ID с другом для совместной игры: " + roomId]);
     }
-
-    socket = io('https://neon-adventure-peerjs.onrender.com', {
-        transports: ['websocket'],
-        reconnection: true,
-        reconnectionAttempts: 5
-    });
-
-    // Добавляем setInterval для отправки корректировок, если это хост
-    if (host) {
-        setInterval(() => {
-            if (isCoopMode && socket) {
-                socket.emit('stateCorrection', {
-                    player1: { x: player.x, y: player.y, direction: player.direction },
-                    player2: player2 ? { x: player2.x, y: player2.y, direction: player2.direction } : null
-                });
-            }
-        }, 200);
-    }
-
-    socket.on('connect', () => {
-        console.log('Socket.IO подключено (хост):', socket.id);
-        if (isHost) {
-            roomId = socket.id;
-            peerIdSpan.textContent = roomId;
-            peerIdDisplay.style.display = 'block';
-            showDialog(["Поделитесь этим ID с другом для совместной игры: " + roomId]);
-        }
-    });
+  });
 
   socket.on('playerJoined', (playerId) => {
     if (isHost) {
