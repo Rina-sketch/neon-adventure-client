@@ -213,7 +213,7 @@ function initLevels() {
         npcs: [
             {
                 x: 100, y: 100, width: 30, height: 30, 
-                dialog: ["Привет, искатель приключений!", "Достань ключ, чтобы открыть дверь на следующий уровень.", "Нажми C, чтобы открыть меню скинов."],
+                dialog: ["Привет, искатель приключений!", "Достань ключ, чтобы открыть дверь на следующий уровень.", "(On Mac: CMD + T | On Windows: CTRL + T) Нажми C, чтобы открыть меню скинов."],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -266,7 +266,7 @@ function initLevels() {
         npcs: [
             {
                 x: 100, y: 500, width: 30, height: 30, 
-                dialog: ["Этот лабиринт полон ловушек!", "Тебе нужно собрать 2 ключа.", "Остерегайся врагов!"],
+                dialog: ["Этот лабиринт полон ловушек!", "Тебе нужно собрать 2 ключа.", "Остерегайся новых врагов!", "Нажми C, чтобы открыть меню скинов."],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -313,7 +313,7 @@ function initLevels() {
         npcs: [
             {
                 x: 400, y: 100, width: 30, height: 30, 
-                dialog: ["Удачи, герой!"],
+                dialog: ["Реши мою головоломку!", "Последовательность: 4-2-1-3", "Удачи, герой!", "Нажми C, чтобы открыть меню скинов."],
                 dialogIndex: 0,
                 hasPuzzle: true,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
@@ -353,7 +353,7 @@ function initLevels() {
         npcs: [
             {
                 x: 50, y: 300, width: 30, height: 30, 
-                dialog: ["Спаси меня, герой!"],
+                dialog: ["Спаси меня, герой!", "Босса нужно ударить 5 раз!", "Нажми C, чтобы открыть меню скинов."],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -374,7 +374,7 @@ function initLevels() {
             attackCooldown: 0,
             active: true
         },
-        objective: "Победите босса",
+        objective: "Победите босса (5 ударов)",
         startPos: {x: 400, y: 500},
         startPos2: {x: 450, y: 500},
         background: 'level4-bg'
