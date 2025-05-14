@@ -1316,7 +1316,7 @@ let isClientReady = false;
 // Initialize Socket.IO for cooperative mode
 function initPeer(host) {
     isHost = host;
-    socket = io('https://your-render-app-url.onrender.com', {
+    socket = io('https://neon-adventure-peerjs.onrender.com', {
         transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: 5
@@ -1412,7 +1412,7 @@ function initPeer(host) {
 // Join cooperative game
 function joinCoop(peerId) {
     roomId = peerId;
-    socket = io('https://your-render-app-url.onrender.com', {
+    socket = io('https://neon-adventure-peerjs.onrender.com', {
         transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: 5
