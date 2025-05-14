@@ -1413,7 +1413,7 @@ function initPeer(host) {
                     chests: chests.map(c => ({ ...c })),
                     campfires: campfires.map(c => ({ ...c })),
                     flowers: flowers.map(f => ({ ...f })),
-                    boss | null,
+                    boss: null,
                     gameObjects: gameObjects.map(o => ({ ...o }))
                 }
             });
