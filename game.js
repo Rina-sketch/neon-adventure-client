@@ -576,25 +576,15 @@ function movePlayer(p) {
         p.attackCooldown--; // Уменьшаем таймер атаки
     }
     
-    if (isCoopMode && conn) {
-        socket.emit({type: 'playerUpdate', player: {
-            x: p.x,
-            y: p.y,
+    if (isCoopMode && socket) {
+        socket.emit('playerUpdate', {
+            roomId: roomId,
+            pos: { x: p.x, y: p.y },
+            speed: { x: p.speed, y: 0 },
             direction: p.direction,
-            isMoving: p.isMoving,
             keys: p.keys,
-            lives: p.lives,
-            hasSword: p.hasSword,
-            invincible: p.invincible,
-            invincibleTimer: p.invincibleTimer,
-            color: p.color,
-            hasPotion: p.hasPotion,
-            damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars,
-            earAngle: p.earAngle,
-            tailAngle: p.tailAngle,
-            attackCooldown: p.attackCooldown
-        }, playerId: p.id});
+            lives: p.lives
+        });
     }
 }
 
@@ -620,15 +610,16 @@ function checkKeyCollisions(p) {
             p.x + p.width > key.x &&
             p.y < key.y + 20 &&
             p.y + p.height > key.y) {
+            
             key.collected = true;
             p.keys++;
             keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
             showDialog(["Вы нашли ключ!"]);
             keys.splice(i, 1);
-            if (isCoopMode && socket && roomId) {
-                socket.emit('keyCollected', { roomId, keyIndex: i });
-            }
             i--;
+            if (isCoopMode && conn) {
+                socket.emit({type: 'keyCollected', playerId: p.id, keyIndex: i});
+            }
         }
     }
 }
@@ -640,12 +631,13 @@ function checkDoorCollisions(p) {
             p.x + p.width > door.x &&
             p.y < door.y + door.height &&
             p.y + p.height > door.y) {
+            
             if (door.locked) {
                 if (currentLevel === 3 && (p.hasPotion || (player2 && player2.hasPotion))) {
                     door.locked = false;
                     showDialog(["Дверь открыта силой зелья!"]);
-                    if (isCoopMode && socket && roomId) {
-                        socket.emit('doorUnlocked', { roomId, doorIndex: doors.indexOf(door) });
+                    if (isCoopMode && conn) {
+                        socket.emit({type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
                     }
                 } else if (p.keys > 0 || (player2 && player2.keys > 0)) {
                     door.locked = false;
@@ -653,16 +645,16 @@ function checkDoorCollisions(p) {
                     if (player2) player2.keys = Math.max(0, player2.keys - (1 - p.keys));
                     keysDisplay.textContent = p.keys + (player2 ? player2.keys : 0);
                     showDialog(["Дверь открыта!"]);
-                    if (isCoopMode && socket && roomId) {
-                        socket.emit('doorUnlocked', { roomId, doorIndex: doors.indexOf(door) });
+                    if (isCoopMode && conn) {
+                        socket.emit({type: 'doorUnlocked', doorIndex: doors.indexOf(door)});
                     }
                 } else {
                     showDialog(["Дверь заперта."]);
                 }
             } else {
                 levelCompleteScreen.style.display = 'flex';
-                if (isCoopMode && socket && roomId) {
-                    socket.emit('levelComplete', { roomId });
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'levelComplete'});
                 }
             }
         }
@@ -698,6 +690,7 @@ function checkChestCollisions(p) {
             p.x + p.width > chest.x &&
             p.y < chest.y + chest.height &&
             p.y + p.height > chest.y) {
+            
             chest.opened = true;
             sfxChestOpen.currentTime = 0;
             sfxChestOpen.play().catch(e => console.error('Ошибка воспроизведения звука открытия сундука:', e));
@@ -705,8 +698,8 @@ function checkChestCollisions(p) {
                 p.hasSword = true;
                 showDialog(["Вы нашли меч! Атакуйте пробелом."]);
             }
-            if (isCoopMode && socket && roomId) {
-                socket.emit('chestOpened', { roomId, chestIndex: chests.indexOf(chest) });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'chestOpened', chestIndex: chests.indexOf(chest), playerId: p.id});
             }
         }
     }
@@ -791,13 +784,16 @@ function checkBossCollision(p) {
 
 // Player attack
 function attack(p) {
-    if (p.attackCooldown > 0) return;
-    p.attackCooldown = 30;
+    if (p.attackCooldown > 0) return; // Игрок не может атаковать, если задержка активна
+    
+    p.attackCooldown = 30; // Устанавливаем задержку в 30 кадров (примерно 0.5 секунды при 60 FPS)
+    
     const attackRange = 40;
     let attackX = p.x;
     let attackY = p.y;
     let attackWidth = p.width;
     let attackHeight = p.height;
+    
     switch (p.direction) {
         case 'up':
             attackY -= attackRange;
@@ -816,43 +812,50 @@ function attack(p) {
             attackWidth = attackRange;
             break;
     }
+    
     for (let i = 0; i < enemies.length; i++) {
         const enemy = enemies[i];
         if (attackX < enemy.x + enemy.width &&
             attackX + attackWidth > enemy.x &&
             attackY < enemy.y + enemy.height &&
             attackY + attackHeight > enemy.y) {
+            
             hitEnemySound.play();
             enemy.health -= p.damageMultiplier;
             if (enemy.health <= 0) {
                 enemies.splice(i, 1);
+                i--;
                 p.lives++;
                 livesDisplay.textContent = p.lives;
                 showDialog(["Враг повержен! +1 жизнь!"]);
-                if (isCoopMode && socket && roomId) {
-                    socket.emit('enemyDefeated', { roomId, enemyIndex: i });
+                if (isCoopMode && conn) {
+                    socket.emit({type: 'enemyDefeated', enemyIndex: i, playerId: p.id, lives: p.lives});
                 }
-                i--;
             }
         }
     }
+    
     if (boss && 
         attackX < boss.x + boss.width &&
         attackX + attackWidth > boss.x &&
         attackY < boss.y + boss.height &&
         attackY + attackHeight > boss.y &&
         !bossDefeated) {
+        
         sfxHitBoss.play();
         boss.health -= 1;
-        console.log(`Boss hit, health: ${boss.health}`);
+        console.log(`Босс получил урон, здоровье: ${boss.health}`);
         if (boss.health <= 0) {
             bossDefeated = true;
             boss = null;
             showDialog(["Босс побежден! Вы нашли секретный сундук!"]);
             victoryScreen.style.display = 'flex';
-            if (isCoopMode && socket && roomId) {
-                socket.emit('bossDefeated', { roomId });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'bossDefeated'});
             }
+        }
+        if (isCoopMode && conn) {
+            socket.emit({type: 'bossUpdate', boss});
         }
     }
 }
@@ -1308,372 +1311,382 @@ function draw() {
 
 let socket = null;
 let roomId = null;
-let playerNumber = null;
+let isClientReady = false;
 
 // Initialize Socket.IO for cooperative mode
-// Join cooperative game
-function joinCoop(inputRoomId) {
-    roomId = inputRoomId;
-
-    if (socket) {
-        socket.disconnect();
-        socket = null;
-    }
-
-    socket = io('https://neon-adventure-peerjs.onrender.com', { // Replace with your Render URL
+function initPeer(host) {
+    isHost = host;
+    socket = io('https://your-render-app-url.onrender.com', {
         transports: ['websocket'],
         reconnection: true,
         reconnectionAttempts: 5
     });
 
     socket.on('connect', () => {
-        console.log('Socket.IO connected:', socket.id);
-        socket.emit('joinRoom', roomId);
+        console.log('Connected to server:', socket.id);
+        if (isHost) {
+            roomId = socket.id;
+            peerIdSpan.textContent = roomId;
+            peerIdDisplay.style.display = 'block';
+            showDialog(["Поделитесь этим ID с другом: " + roomId]);
+            socket.emit('join', roomId);
+        }
     });
 
-    // Reuse the same event handlers as in initCoop
     socket.on('playerNumber', (number) => {
         playerNumber = number;
-        player.id = `player${number}`;
-        player.color = number === 1 ? '#00f' : '#f00';
-        console.log(`Assigned player number: ${playerNumber}`);
+        console.log('Assigned player number:', playerNumber);
     });
 
-    socket.on('roomId', (id) => {
-        roomId = id;
-    });
-
-    socket.on('roomFull', (message) => {
-        showDialog([message]);
-    });
-
-    socket.on('startGame', (players) => {
+    socket.on('startGame', (data) => {
         isCoopMode = true;
-        if (playerNumber === 2) {
-            player2 = {
-                x: levels[currentLevel].startPos.x,
-                y: levels[currentLevel].startPos.y,
-                width: 30,
-                height: 30,
-                speed: 5,
-                direction: 'right',
-                keys: 0,
-                lives: 3,
-                hasSword: false,
-                invincible: false,
-                invincibleTimer: 0,
-                color: '#00f',
-                hasPotion: false,
-                damageMultiplier: 1,
-                catEars: false,
-                earAngle: 0,
-                tailAngle: 0,
-                isMoving: false,
-                id: 'player1',
-                keysPressed: {},
-                attackCooldown: 0
-            };
-        }
         titleScreen.style.display = 'none';
         menuBgm.pause();
         loadLevel(1);
-        gameLoop();
     });
 
-    socket.on('updatePlayer', (data) => {
-        if (data.playerId !== socket.id && player2) {
-            player2.x = data.pos.x;
-            player2.y = data.pos.y;
-            player2.direction = data.direction;
-            player2.isMoving = data.isMoving;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.invincible = data.invincible;
-            player2.invincibleTimer = data.invincibleTimer;
-            player2.color = data.skin;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.earAngle = data.earAngle;
-            player2.tailAngle = data.tailAngle;
-            player2.attackCooldown = data.attackCooldown;
+  socket.on('playerJoined', (playerId) => {
+    if (isHost) {
+      console.log('Клиент подключился к хосту:', playerId);
+      if (playerId === socket.id) {
+        console.warn('Хост пытается подключиться сам к себе, игнорируем');
+        return; // Игнорируем, если хост сам себя подключил
+      }
+      isCoopMode = true;
+      player2 = {
+        x: levels[currentLevel].startPos2.x,
+        y: levels[currentLevel].startPos2.y,
+        width: 30,
+        height: 30,
+        speed: 5,
+        direction: 'right',
+        keys: 0,
+        lives: 3,
+        hasSword: false,
+        invincible: false,
+        invincibleTimer: 0,
+        color: '#f00',
+        hasPotion: false,
+        damageMultiplier: 1,
+        catEars: false,
+        earAngle: 0,
+        tailAngle: 0,
+        isMoving: false,
+        id: 'player2',
+        keysPressed: {}
+      };
+      // Отправляем хосту подтверждение, что он готов
+      socket.emit('hostReady', roomId);
+    }
+  });
+
+  socket.on('clientReady', (clientData) => {
+    if (isHost) {
+      console.log('Клиент готов, данные получены:', clientData);
+      Object.assign(player2, clientData);
+      titleScreen.style.display = 'none';
+      menuBgm.pause();
+      loadLevel(1);
+      socket.emit('gameData', roomId, {
+        type: 'startGame',
+        level: currentLevel,
+        state: {
+          player: {...player},
+          player2: {...player2},
+          walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
         }
+      });
+      console.log('Игра началась для хоста и клиента, отправлено gameData');
+      gameLoop();
+    }
+  });
+
+  socket.on('gameData', handlePeerData);
+
+  socket.on('connect_error', (err) => {
+    console.error('Socket.IO ошибка (хост):', err);
+    showDialog(["Ошибка соединения. Попробуйте снова."]);
+  });
+}
+
+// Join cooperative game
+function joinCoop(peerId) {
+    roomId = peerId;
+    socket = io('https://your-render-app-url.onrender.com', {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: 5
     });
 
-    socket.on('removeKey', (keyIndex) => {
-        if (keyIndex < keys.length) {
-            keys[keyIndex].collected = true;
-            keys.splice(keyIndex, 1);
-            keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-        }
+    socket.on('connect', () => {
+        console.log('Connected to server:', socket.id);
+        socket.emit('join', roomId);
     });
 
-    socket.on('unlockDoor', (doorIndex) => {
-        if (doorIndex < doors.length) {
-            doors[doorIndex].locked = false;
-        }
+    socket.on('playerNumber', (number) => {
+        playerNumber = number;
+        console.log('Assigned player number:', playerNumber);
     });
 
-    socket.on('openChest', (chestIndex) => {
-        if (chestIndex < chests.length) {
-            chests[chestIndex].opened = true;
-            if (chests[chestIndex].contains === 'sword') {
-                if (player2) player2.hasSword = true;
-            }
-        }
-    });
-
-    socket.on('removeEnemy', (enemyIndex) => {
-        if (enemyIndex < enemies.length) {
-            enemies.splice(enemyIndex, 1);
-        }
-    });
-
-    socket.on('defeatBoss', () => {
-        bossDefeated = true;
-        boss = null;
-        victoryScreen.style.display = 'flex';
-    });
-
-    socket.on('solvePuzzle', () => {
-        player.hasPotion = true;
-        if (player2) player2.hasPotion = true;
-        puzzleContainer.style.display = 'none';
-        objectiveDisplay.textContent = "Пройти к двери";
-        doors.forEach(door => door.locked = false);
-    });
-
-    socket.on('syncLevel', (data) => {
-        currentLevel = data.level;
-        if (data.gameState) {
-            player = data.gameState.player;
-            player2 = data.gameState.player2;
-            walls = data.gameState.walls;
-            keys = data.gameState.keys;
-            doors = data.gameState.doors;
-            npcs = data.gameState.npcs;
-            enemies = data.gameState.enemies;
-            chests = data.gameState.chests;
-            campfires = data.gameState.campfires;
-            flowers = data.gameState.flowers;
-            boss = data.gameState.boss;
-            gameObjects = data.gameState.gameObjects;
-        }
-        levelDisplay.textContent = currentLevel;
-        objectiveDisplay.textContent = levels[currentLevel].objective;
-        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-        livesDisplay.textContent = player.lives;
-    });
-
-    socket.on('showLevelComplete', () => {
-        levelCompleteScreen.style.display = 'flex';
-        titleScreen.style.display = 'none'; // Fixed typo: stratorScreen -> titleScreen
+    socket.on('startGame', (data) => {
+        isCoopMode = true;
+        titleScreen.style.display = 'none';
         menuBgm.pause();
         loadLevel(1);
-        gameLoop();
     });
 
-    socket.on('showGameOver', () => {
-        gameOverScreen.style.display = 'flex';
-    });
+  socket.on('hostReady', () => {
+    console.log('Хост готов, клиент отправляет своё состояние');
+    isClientReady = true;
+    const clientState = {
+      x: levels[currentLevel].startPos2.x,
+      y: levels[currentLevel].startPos2.y,
+      width: 30,
+      height: 30,
+      speed: 5,
+      direction: 'right',
+      keys: 0,
+      lives: 3,
+      hasSword: false,
+      invincible: false,
+      invincibleTimer: 0,
+      color: '#f00',
+      hasPotion: false,
+      damageMultiplier: 1,
+      catEars: false,
+      earAngle: 0,
+      tailAngle: 0,
+      isMoving: false,
+      id: 'player2',
+      keysPressed: {}
+    };
+    socket.emit('clientReady', clientState);
+  });
 
-    socket.on('playerDisconnected', (playerId) => {
-        showDialog(["A player has disconnected. Returning to single-player mode."]);
-        isCoopMode = false;
-        player2 = null;
-        socket.disconnect();
-        socket = null;
-        roomId = null;
-        playerNumber = null;
-    });
+  socket.on('gameData', (data) => {
+    console.log('Клиент получил данные:', data);
+    if (data.type === 'startGame') {
+      isCoopMode = true;
+      currentLevel = data.level;
+      Object.assign(player, data.state.player2); // Клиент становится player2
+      player2 = {...data.state.player}; // Хост становится player1
+      player.id = 'player2';
+      player.color = '#f00';
+      player2.id = 'player1';
+      player2.color = '#00f';
+      walls = data.state.walls;
+      keys = data.state.keys;
+      doors = data.state.doors;
+      npcs = data.state.npcs;
+      enemies = data.state.enemies;
+      chests = data.state.chests;
+      campfires = data.state.campfires;
+      flowers = data.state.flowers;
+      boss = data.state.boss;
+      gameObjects = data.state.gameObjects;
+      levelDisplay.textContent = currentLevel;
+      objectiveDisplay.textContent = levels[currentLevel].objective;
+      keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+      livesDisplay.textContent = player.lives;
+      titleScreen.style.display = 'none';
+      menuBgm.pause();
+      console.log('Клиент начал игру');
+      gameLoop();
+    } else {
+      handlePeerData(data);
+    }
+  });
 
-    socket.on('connect_error', (err) => {
-        console.error('Socket.IO error:', err);
-        showDialog(["Connection error. Please try again."]);
-    });
-} // Added missing closing brace for joinCoop function
+  socket.on('connect_error', (err) => {
+    console.error('Socket.IO ошибка (клиент):', err);
+    showDialog(["Не удалось подключиться. Проверьте ID."]);
+  });
+}
 
 // Handle peer data
-// Join cooperative game
-function joinCoop(inputRoomId) {
-    roomId = inputRoomId;
-
-    if (socket) {
-        socket.disconnect();
-        socket = null;
-    }
-
-    socket = io('https://neon-adventure-peerjs.onrender.com', { // Replace with your Render URL
-        transports: ['websocket'],
-        reconnection: true,
-        reconnectionAttempts: 5
-    });
-
-    socket.on('connect', () => {
-        console.log('Socket.IO connected:', socket.id);
-        socket.emit('joinRoom', roomId);
-    });
-
-    // Reuse the same event handlers as in initCoop
-    socket.on('playerNumber', (number) => {
-        playerNumber = number;
-        player.id = `player${number}`;
-        player.color = number === 1 ? '#00f' : '#f00';
-        console.log(`Assigned player number: ${playerNumber}`);
-    });
-
-    socket.on('roomId', (id) => {
-        roomId = id;
-    });
-
-    socket.on('roomFull', (message) => {
-        showDialog([message]);
-    });
-
-    socket.on('startGame', (players) => {
-        isCoopMode = true;
-        if (playerNumber === 2) {
-            player2 = {
-                x: levels[currentLevel].startPos.x,
-                y: levels[currentLevel].startPos.y,
-                width: 30,
-                height: 30,
-                speed: 5,
-                direction: 'right',
-                keys: 0,
-                lives: 3,
-                hasSword: false,
-                invincible: false,
-                invincibleTimer: 0,
-                color: '#00f',
-                hasPotion: false,
-                damageMultiplier: 1,
-                catEars: false,
-                earAngle: 0,
-                tailAngle: 0,
-                isMoving: false,
-                id: 'player1',
-                keysPressed: {},
-                attackCooldown: 0
-            };
-        }
-        titleScreen.style.display = 'none';
-        menuBgm.pause();
-        loadLevel(1);
-        gameLoop();
-    });
-
-    socket.on('updatePlayer', (data) => {
-        if (data.playerId !== socket.id && player2) {
-            player2.x = data.pos.x;
-            player2.y = data.pos.y;
-            player2.direction = data.direction;
-            player2.isMoving = data.isMoving;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.invincible = data.invincible;
-            player2.invincibleTimer = data.invincibleTimer;
-            player2.color = data.skin;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.earAngle = data.earAngle;
-            player2.tailAngle = data.tailAngle;
-            player2.attackCooldown = data.attackCooldown;
-        }
-    });
-
-    socket.on('removeKey', (keyIndex) => {
-        if (keyIndex < keys.length) {
-            keys[keyIndex].collected = true;
-            keys.splice(keyIndex, 1);
+function handlePeerData(data) {
+    switch (data.type) {
+        case 'startGame':
+            isCoopMode = true;
+            currentLevel = data.level;
+            Object.assign(player, data.state.player);
+            player2 = data.state.player2;
+            walls = data.state.walls;
+            keys = data.state.keys;
+            doors = data.state.doors;
+            npcs = data.state.npcs;
+            enemies = data.state.enemies;
+            chests = data.state.chests;
+            campfires = data.state.campfires;
+            flowers = data.state.flowers;
+            boss = data.state.boss;
+            gameObjects = data.state.gameObjects;
+            levelDisplay.textContent = currentLevel;
+            objectiveDisplay.textContent = levels[currentLevel].objective;
             keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-        }
-    });
-
-    socket.on('unlockDoor', (doorIndex) => {
-        if (doorIndex < doors.length) {
-            doors[doorIndex].locked = false;
-        }
-    });
-
-    socket.on('openChest', (chestIndex) => {
-        if (chestIndex < chests.length) {
-            chests[chestIndex].opened = true;
-            if (chests[chestIndex].contains === 'sword') {
-                if (player2) player2.hasSword = true;
+            livesDisplay.textContent = player.lives;
+            titleScreen.style.display = 'none';
+            menuBgm.pause();
+            gameLoop();
+            break;
+        case 'playerUpdate':
+            if (data.playerId === 'player1' && player2) {
+                Object.assign(player2, data.player);
+            } else if (data.playerId === 'player2' && player) {
+                Object.assign(player, data.player);
             }
-        }
-    });
-
-    socket.on('removeEnemy', (enemyIndex) => {
-        if (enemyIndex < enemies.length) {
-            enemies.splice(enemyIndex, 1);
-        }
-    });
-
-    socket.on('defeatBoss', () => {
-        bossDefeated = true;
-        boss = null;
-        victoryScreen.style.display = 'flex';
-    });
-
-    socket.on('solvePuzzle', () => {
-        player.hasPotion = true;
-        if (player2) player2.hasPotion = true;
-        puzzleContainer.style.display = 'none';
-        objectiveDisplay.textContent = "Пройти к двери";
-        doors.forEach(door => door.locked = false);
-    });
-
-    socket.on('syncLevel', (data) => {
-        currentLevel = data.level;
-        if (data.gameState) {
-            player = data.gameState.player;
-            player2 = data.gameState.player2;
-            walls = data.gameState.walls;
-            keys = data.gameState.keys;
-            doors = data.gameState.doors;
-            npcs = data.gameState.npcs;
-            enemies = data.gameState.enemies;
-            chests = data.gameState.chests;
-            campfires = data.gameState.campfires;
-            flowers = data.gameState.flowers;
-            boss = data.gameState.boss;
-            gameObjects = data.gameState.gameObjects;
-        }
-        levelDisplay.textContent = currentLevel;
-        objectiveDisplay.textContent = levels[currentLevel].objective;
-        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-        livesDisplay.textContent = player.lives;
-    });
-
-    socket.on('showLevelComplete', () => {
-        levelCompleteScreen.style.display = 'flex';
-   stratorScreen.style.display = 'none';
-    menuBgm.pause();
-    loadLevel(1);
-    gameLoop();
-});
-
-coopBtn.addEventListener('click', () => {
-    initCoop(true);
-});
-
-joinCoopBtn.addEventListener('click', () => {
-    const peerId = coopIdInput.value.trim();
-    if (!peerId) {
-        showDialog(["Введите ID хоста!"]);
-        return;
+            break;
+        case 'keyDown':
+            if (player2 && data.playerId !== player.id) {
+                player2.keysPressed[data.code] = true;
+            }
+            break;
+        case 'keyUp':
+            if (player2 && data.playerId !== player.id) {
+                player2.keysPressed[data.code] = false;
+            }
+            break;
+        case 'keyCollected':
+            if (data.keyIndex < keys.length) {
+                keys[data.keyIndex].collected = true;
+                if (data.playerId === 'player2') {
+                    player2.keys++;
+                } else {
+                    player.keys++;
+                }
+                keys.splice(data.keyIndex, 1);
+                keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+            }
+            break;
+        case 'doorUnlocked':
+            doors[data.doorIndex].locked = false;
+            break;
+        case 'chestOpened':
+            chests[data.chestIndex].opened = true;
+            if (chests[data.chestIndex].contains === 'sword') {
+                if (data.playerId === 'player2') {
+                    player2.hasSword = true;
+                } else {
+                    player.hasSword = true;
+                }
+            }
+            break;
+        case 'enemyDefeated':
+            enemies.splice(data.enemyIndex, 1);
+            if (data.playerId === 'player2') {
+                player2.lives = data.lives;
+            } else {
+                player.lives = data.lives;
+            }
+            livesDisplay.textContent = player.lives;
+            break;
+        case 'bossDefeated':
+            bossDefeated = true;
+            boss = null;
+            victoryScreen.style.display = 'flex';
+            break;
+        case 'playerHit':
+            if (data.playerId === 'player2' && player2) {
+                player2.lives = data.lives;
+                player2.x = data.x;
+                player2.y = data.y;
+                player2.invincible = true;
+                player2.invincibleTimer = 120;
+            } else if (data.playerId === 'player1' && player) {
+                player.lives = data.lives;
+                player.x = data.x;
+                player.y = data.y;
+                player.invincible = true;
+                player.invincibleTimer = 120;
+            }
+            livesDisplay.textContent = player.lives;
+            break;
+        case 'loadLevel':
+            currentLevel = data.levelNum;
+            if (data.state) {
+                Object.assign(player, data.state.player);
+                player2 = data.state.player2;
+                walls = data.state.walls;
+                keys = data.state.keys;
+                doors = data.state.doors;
+                npcs = data.state.npcs;
+                enemies = data.state.enemies;
+                chests = data.state.chests;
+                campfires = data.state.campfires;
+                flowers = data.state.flowers;
+                boss = data.state.boss;
+                gameObjects = data.state.gameObjects;
+            } else {
+                loadLevel(data.levelNum);
+            }
+            break;
+        case 'levelComplete':
+            levelCompleteScreen.style.display = 'flex';
+            break;
+        case 'gameOver':
+            gameOverScreen.style.display = 'flex';
+            break;
+        case 'openPuzzle':
+            puzzleContainer.style.display = 'flex';
+            break;
+        case 'openSkinMenu':
+            skinMenu.style.display = 'flex';
+            break;
+        case 'dialogAdvance':
+            showDialog(data.messages);
+            break;
+        case 'bossProjectile':
+            gameObjects.push({
+                x: data.x,
+                y: data.y,
+                width: 10,
+                height: 10,
+                speed: 5,
+                dx: data.dx,
+                dy: data.dy,
+                type: 'bossProjectile'
+            });
+            break;
+        case 'projectileRemoved':
+            if (data.index < gameObjects.length) {
+                gameObjects.splice(data.index, 1);
+            }
+            break;
+        case 'enemiesUpdate':
+            enemies = data.enemies;
+            break;
+        case 'bossUpdate':
+            if (boss) {
+                Object.assign(boss, data.boss);
+                console.log(`Получено обновление босса: здоровье=${boss.health}`);
+            }
+            break;
+        case 'projectilesUpdate':
+            gameObjects = data.gameObjects;
+            break;
+        case 'puzzleAttempt':
+            if (puzzleAttempt.length < 4) {
+                puzzleAttempt.push(data.value);
+                puzzleSequence.textContent = puzzleAttempt.join('-');
+            }
+            break;
+        case 'puzzleSolved':
+            player.hasPotion = true;
+            if (player2) player2.hasPotion = true;
+            puzzleContainer.style.display = 'none';
+            objectiveDisplay.textContent = "Пройти к двери";
+            doors.forEach(door => door.locked = false);
+            break;
+        case 'puzzleReset':
+            puzzleAttempt = [];
+            puzzleSequence.textContent = '';
+            break;
     }
-    joinCoop(peerId);
-});
+}
 
 // Main game loop
 function gameLoop() {
-    console.log('Game loop running');
+console.log('Game loop started on client');
     if (titleScreen.style.display !== 'none' || gameOverScreen.style.display === 'flex' || 
         levelCompleteScreen.style.display === 'flex' || victoryScreen.style.display === 'flex' || 
         skinMenu.style.display === 'flex' || puzzleContainer.style.display === 'flex') {
@@ -1681,40 +1694,17 @@ function gameLoop() {
         requestAnimationFrame(gameLoop);
         return;
     }
-
+    
     if (player.lives > 0) movePlayer(player);
-    if (player2 && player2.lives > 0 && isCoopMode) movePlayer(player2);
-
-    if (isHost || !isCoopMode) {
-        moveEnemies();
-        moveBoss();
-        moveProjectiles();
-    }
-
+    if (player2 && player2.lives > 0) movePlayer(player2);
+    
+    moveEnemies();
+    moveBoss();
+    moveProjectiles();
     playBackgroundMusic();
+    
     draw();
-
-    if (isCoopMode && socket && roomId) {
-        socket.emit('playerUpdate', {
-            roomId,
-            pos: { x: player.x, y: player.y },
-            skin: player.color,
-            direction: player.direction,
-            isMoving: player.isMoving,
-            keys: player.keys,
-            lives: player.lives,
-            hasSword: player.hasSword,
-            invincible: player.invincible,
-            invincibleTimer: player.invincibleTimer,
-            hasPotion: player.hasPotion,
-            damageMultiplier: player.damageMultiplier,
-            catEars: player.catEars,
-            earAngle: player.earAngle,
-            tailAngle: player.tailAngle,
-            attackCooldown: player.attackCooldown
-        });
-    }
-
+    
     requestAnimationFrame(gameLoop);
 }
 
@@ -1799,15 +1789,15 @@ puzzleSubmit.addEventListener('click', () => {
             showDialog(["Головоломка решена! Вы получили зелье!"]);
             objectiveDisplay.textContent = "Пройти к двери";
             doors.forEach(door => door.locked = false);
-            if (isCoopMode && socket && roomId) {
-                socket.emit('puzzleSolved', { roomId });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'puzzleSolved'});
             }
         } else {
             puzzleAttempt = [];
             puzzleSequence.textContent = '';
             showDialog(["Неправильная последовательность. Попробуйте снова."]);
-            if (isCoopMode && socket && roomId) {
-                socket.emit('puzzleReset', { roomId });
+            if (isCoopMode && conn) {
+                socket.emit({type: 'puzzleReset'});
             }
         }
     }
@@ -1819,13 +1809,15 @@ initLevels();
 singleBtn.addEventListener('click', () => {
     isCoopMode = false;
     titleScreen.style.display = 'none';
-    menuBgm.pause();
+    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+    menuBgm.pause(); // Останавливаем после старта игры
     loadLevel(1);
     gameLoop();
 });
 
 coopBtn.addEventListener('click', () => {
-    initCoop(true);
+    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
+    initPeer(true);
 });
 
 joinCoopBtn.addEventListener('click', () => {
@@ -1834,5 +1826,38 @@ joinCoopBtn.addEventListener('click', () => {
         showDialog(["Введите ID хоста!"]);
         return;
     }
+    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
     joinCoop(peerId);
 });
+function setupSocketHandlers() {
+    if (!socket) return;
+
+    socket.on('playerUpdate', (data) => {
+        if (data.playerId !== socket.id && player2) {
+            player2.x = data.pos.x;
+            player2.y = data.pos.y;
+            player2.direction = data.direction;
+            player2.keys = data.keys;
+            player2.lives = data.lives;
+        }
+    });
+
+    socket.on('keyCollected', (data) => {
+        if (data.playerId !== socket.id && player2) {
+            player2.keys = data.totalKeys;
+        }
+        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+    });
+
+    socket.on('playerDisconnected', (playerId) => {
+        showDialog(["Игрок отключился. Возвращаемся в меню..."]);
+        setTimeout(() => {
+            location.reload();
+        }, 3000);
+    });
+
+    // Добавьте другие обработчики по аналогии
+}
+
+// Вызовите эту функцию после инициализации socket
+setupSocketHandlers();
