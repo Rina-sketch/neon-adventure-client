@@ -416,19 +416,19 @@ function loadLevel(levelNum) {
     }
     
     walls = [...level.walls];
-    keys = level.keys.map(key => ({...key}));
+    keys = level.keys.map(key => ({ ...key }));
     doors = level.doors.map(door => {
         if (levelNum === 3) {
-            return {...door, locked: !player.hasPotion && !(player2 && player2.hasPotion)};
+            return { ...door, locked: !player.hasPotion && !(player2 && player2.hasPotion) };
         }
-        return {...door};
+        return { ...door };
     });
-    npcs = level.npcs.map(npc => ({...npc}));
-    enemies = level.enemies.map(enemy => ({...enemy}));
-    chests = level.chests.map(chest => ({...chest}));
-    campfires = level.campfires.map(campfire => ({...campfire}));
-    flowers = level.flowers.map(flower => ({...flower}));
-    boss = level.boss && !bossDefeated ? {...level.boss} : null;
+    npcs = level.npcs.map(npc => ({ ...npc }));
+    enemies = level.enemies.map(enemy => ({ ...enemy }));
+    chests = level.chests.map(chest => ({ ...chest }));
+    campfires = level.campfires.map(campfire => ({ ...campfire }));
+    flowers = level.flowers.map(flower => ({ ...flower }));
+    boss = level.boss && !bossDefeated ? { ...level.boss } : null;
     gameObjects = [];
     
     levelDisplay.textContent = levelNum;
@@ -455,12 +455,26 @@ function loadLevel(levelNum) {
     
     playBackgroundMusic();
     
-    if (isCoopMode && conn) {
-        socket.emit({type: 'loadLevel', levelNum, state: {
-            player: {...player},
-            player2: player2 ? {...player2} : null,
-            walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
-        }});
+    if (isCoopMode && socket) {
+        socket.emit('gameData', {
+            roomId: roomId,
+            type: 'loadLevel',
+            levelNum,
+            state: {
+                player: { ...player },
+                player2: player2 ? { ...player2 } : null,
+                walls: walls.map(w => ({ ...w })),
+                keys: keys.map(k => ({ ...k })),
+                doors: doors.map(d => ({ ...d })),
+                npcs: npcs.map(n => ({ ...n })),
+                enemies: enemies.map(e => ({ ...e })),
+                chests: chests.map(c => ({ ...c })),
+                campfires: campfires.map(c => ({ ...c })),
+                flowers: flowers.map(f => ({ ...f })),
+                boss: boss ? { ...boss } : null,
+                gameObjects: gameObjects.map(o => ({ ...o }))
+            }
+        });
     }
 }
 
@@ -1330,6 +1344,8 @@ function initPeer(host) {
             peerIdDisplay.style.display = 'block';
             showDialog(["Поделитесь этим ID с другом: " + roomId]);
             socket.emit('join', roomId);
+            // Инициализируем уровень 1 для хоста
+            loadLevel(1);
         }
     });
 
@@ -1338,75 +1354,80 @@ function initPeer(host) {
         console.log('Assigned player number:', playerNumber);
     });
 
-    socket.on('startGame', (data) => {
-        isCoopMode = true;
-        titleScreen.style.display = 'none';
-        menuBgm.pause();
-        loadLevel(1);
+    socket.on('playerJoined', (playerId) => {
+        if (isHost) {
+            console.log('Клиент подключился к хосту:', playerId);
+            if (playerId === socket.id) {
+                console.warn('Хост пытается подключиться сам к себе, игнорируем');
+                return;
+            }
+            isCoopMode = true;
+            player2 = {
+                x: levels[currentLevel].startPos2.x,
+                y: levels[currentLevel].startPos2.y,
+                width: 30,
+                height: 30,
+                speed: 5,
+                direction: 'right',
+                keys: 0,
+                lives: 3,
+                hasSword: false,
+                invincible: false,
+                invincibleTimer: 0,
+                color: '#f00',
+                hasPotion: false,
+                damageMultiplier: 1,
+                catEars: false,
+                earAngle: 0,
+                tailAngle: 0,
+                isMoving: false,
+                id: 'player2',
+                keysPressed: {}
+            };
+            // Отправляем начальное состояние игры клиенту
+            socket.emit('hostReady', roomId);
+        }
     });
 
-  socket.on('playerJoined', (playerId) => {
-    if (isHost) {
-      console.log('Клиент подключился к хосту:', playerId);
-      if (playerId === socket.id) {
-        console.warn('Хост пытается подключиться сам к себе, игнорируем');
-        return; // Игнорируем, если хост сам себя подключил
-      }
-      isCoopMode = true;
-      player2 = {
-        x: levels[currentLevel].startPos2.x,
-        y: levels[currentLevel].startPos2.y,
-        width: 30,
-        height: 30,
-        speed: 5,
-        direction: 'right',
-        keys: 0,
-        lives: 3,
-        hasSword: false,
-        invincible: false,
-        invincibleTimer: 0,
-        color: '#f00',
-        hasPotion: false,
-        damageMultiplier: 1,
-        catEars: false,
-        earAngle: 0,
-        tailAngle: 0,
-        isMoving: false,
-        id: 'player2',
-        keysPressed: {}
-      };
-      // Отправляем хосту подтверждение, что он готов
-      socket.emit('hostReady', roomId);
-    }
-  });
-
-  socket.on('clientReady', (clientData) => {
-    if (isHost) {
-      console.log('Клиент готов, данные получены:', clientData);
-      Object.assign(player2, clientData);
-      titleScreen.style.display = 'none';
-      menuBgm.pause();
-      loadLevel(1);
-      socket.emit('gameData', roomId, {
-        type: 'startGame',
-        level: currentLevel,
-        state: {
-          player: {...player},
-          player2: {...player2},
-          walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
+    socket.on('clientReady', (clientData) => {
+        if (isHost) {
+            console.log('Клиент готов, данные получены:', clientData);
+            Object.assign(player2, clientData);
+            titleScreen.style.display = 'none';
+            menuBgm.pause();
+            // Убедимся, что уровень загружен
+            loadLevel(currentLevel);
+            // Отправляем полное состояние игры клиенту
+            socket.emit('gameData', {
+                roomId: roomId,
+                type: 'startGame',
+                level: currentLevel,
+                state: {
+                    player: { ...player },
+                    player2: { ...player2 },
+                    walls: walls.map(w => ({ ...w })),
+                    keys: keys.map(k => ({ ...k })),
+                    doors: doors.map(d => ({ ...d })),
+                    npcs: npcs.map(n => ({ ...n })),
+                    enemies: enemies.map(e => ({ ...e })),
+                    chests: chests.map(c => ({ ...c })),
+                    campfires: campfires.map(c => ({ ...c })),
+                    flowers: flowers.map(f => ({ ...f })),
+                    boss | null,
+                    gameObjects: gameObjects.map(o => ({ ...o }))
+                }
+            });
+            console.log('Игра началась для хоста, отправлено gameData');
+            gameLoop();
         }
-      });
-      console.log('Игра началась для хоста и клиента, отправлено gameData');
-      gameLoop();
-    }
-  });
+    });
 
-  socket.on('gameData', handlePeerData);
+    socket.on('gameData', handlePeerData);
 
-  socket.on('connect_error', (err) => {
-    console.error('Socket.IO ошибка (хост):', err);
-    showDialog(["Ошибка соединения. Попробуйте снова."]);
-  });
+    socket.on('connect_error', (err) => {
+        console.error('Socket.IO ошибка (хост):', err);
+        showDialog(["Ошибка соединения. Попробуйте снова."]);
+    });
 }
 
 // Join cooperative game
@@ -1428,79 +1449,77 @@ function joinCoop(peerId) {
         console.log('Assigned player number:', playerNumber);
     });
 
-    socket.on('startGame', (data) => {
-        isCoopMode = true;
-        titleScreen.style.display = 'none';
-        menuBgm.pause();
-        loadLevel(1);
+    socket.on('hostReady', () => {
+        console.log('Хост готов, клиент отправляет своё состояние');
+        isClientReady = true;
+        const clientState = {
+            x: levels[1].startPos2.x,
+            y: levels[1].startPos2.y,
+            width: 30,
+            height: 30,
+            speed: 5,
+            direction: 'right',
+            keys: 0,
+            lives: 3,
+            hasSword: false,
+            invincible: false,
+            invincibleTimer: 0,
+            color: '#f00',
+            hasPotion: false,
+            damageMultiplier: 1,
+            catEars: false,
+            earAngle: 0,
+            tailAngle: 0,
+            isMoving: false,
+            id: 'player2',
+            keysPressed: {}
+        };
+        socket.emit('clientReady', clientState);
     });
 
-  socket.on('hostReady', () => {
-    console.log('Хост готов, клиент отправляет своё состояние');
-    isClientReady = true;
-    const clientState = {
-      x: levels[currentLevel].startPos2.x,
-      y: levels[currentLevel].startPos2.y,
-      width: 30,
-      height: 30,
-      speed: 5,
-      direction: 'right',
-      keys: 0,
-      lives: 3,
-      hasSword: false,
-      invincible: false,
-      invincibleTimer: 0,
-      color: '#f00',
-      hasPotion: false,
-      damageMultiplier: 1,
-      catEars: false,
-      earAngle: 0,
-      tailAngle: 0,
-      isMoving: false,
-      id: 'player2',
-      keysPressed: {}
-    };
-    socket.emit('clientReady', clientState);
-  });
+    socket.on('gameData', (data) => {
+        console.log('Клиент получил данные:', data);
+        if (data.type === 'startGame') {
+            isCoopMode = true;
+            currentLevel = data.level;
+            // Клиент становится player2, хост — player1
+            Object.assign(player, data.state.player2);
+            player2 = { ...data.state.player };
+            player.id = 'player2';
+            player.color = '#f00';
+            player2彼此: true,
+            player2.id = 'player1';
+            player2.color = '#00f';
+            // Копируем объекты уровня
+            walls = data.state.walls.map(w => ({ ...w }));
+            keys = data.state.keys.map(k => ({ ...k }));
+            doors = data.state.doors.map(d => ({ ...d }));
+            npcs = data.state.npcs.map(n => ({ ...n }));
+            enemies = data.state.enemies.map(e => ({ ...e }));
+            chests = data.state.chests.map(c => ({ ...c }));
+            campfires = data.state.campfires.map(c => ({ ...c }));
+            flowers = data.state.flowers.map(f => ({ ...f }));
+            boss = data.state.boss ? { ...data.state.boss } : null;
+            gameObjects = data.state.gameObjects.map(o => ({ ...o }));
+            // Обновляем UI
+            levelDisplay.textContent = currentLevel;
+            objectiveDisplay.textContent = levels[currentLevel].objective;
+            keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+            livesDisplay.textContent = player.lives;
+            // Скрываем титульный экран и начинаем игру
+            titleScreen.style.display = 'none';
+            menuBgm.pause();
+            console.log('Клиент начал игру');
+            gameLoop();
+        } else {
+            handlePeerData(data);
+        }
+    });
 
-  socket.on('gameData', (data) => {
-    console.log('Клиент получил данные:', data);
-    if (data.type === 'startGame') {
-      isCoopMode = true;
-      currentLevel = data.level;
-      Object.assign(player, data.state.player2); // Клиент становится player2
-      player2 = {...data.state.player}; // Хост становится player1
-      player.id = 'player2';
-      player.color = '#f00';
-      player2.id = 'player1';
-      player2.color = '#00f';
-      walls = data.state.walls;
-      keys = data.state.keys;
-      doors = data.state.doors;
-      npcs = data.state.npcs;
-      enemies = data.state.enemies;
-      chests = data.state.chests;
-      campfires = data.state.campfires;
-      flowers = data.state.flowers;
-      boss = data.state.boss;
-      gameObjects = data.state.gameObjects;
-      levelDisplay.textContent = currentLevel;
-      objectiveDisplay.textContent = levels[currentLevel].objective;
-      keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-      livesDisplay.textContent = player.lives;
-      titleScreen.style.display = 'none';
-      menuBgm.pause();
-      console.log('Клиент начал игру');
-      gameLoop();
-    } else {
-      handlePeerData(data);
-    }
-  });
-
-  socket.on('connect_error', (err) => {
-    console.error('Socket.IO ошибка (клиент):', err);
-    showDialog(["Не удалось подключиться. Проверьте ID."]);
-  });
+    socket.on('connect_error', (err) => {
+        console.error('Socket.IO ошибка (клиент):', err);
+        showDialog(["Не удалось подключиться. Проверьте ID."]);
+    });
 }
 
 // Handle peer data
@@ -1510,17 +1529,17 @@ function handlePeerData(data) {
             isCoopMode = true;
             currentLevel = data.level;
             Object.assign(player, data.state.player);
-            player2 = data.state.player2;
-            walls = data.state.walls;
-            keys = data.state.keys;
-            doors = data.state.doors;
-            npcs = data.state.npcs;
-            enemies = data.state.enemies;
-            chests = data.state.chests;
-            campfires = data.state.campfires;
-            flowers = data.state.flowers;
-            boss = data.state.boss;
-            gameObjects = data.state.gameObjects;
+            player2 = data.state.player2 ? { ...data.state.player2 } : null;
+            walls = data.state.walls.map(w => ({ ...w }));
+            keys = data.state.keys.map(k => ({ ...k }));
+            doors = data.state.doors.map(d => ({ ...d }));
+            npcs = data.state.npcs.map(n => ({ ...n }));
+            enemies = data.state.enemies.map(e => ({ ...e }));
+            chests = data.state.chests.map(c => ({ ...c }));
+            campfires = data.state.campfires.map(c => ({ ...c }));
+            flowers = data.state.flowers.map(f => ({ ...f }));
+            boss = data.state.boss ? { ...data.state.boss } : null;
+            gameObjects = data.state.gameObjects.map(o => ({ ...o }));
             levelDisplay.textContent = currentLevel;
             objectiveDisplay.textContent = levels[currentLevel].objective;
             keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
@@ -1530,10 +1549,12 @@ function handlePeerData(data) {
             gameLoop();
             break;
         case 'playerUpdate':
-            if (data.playerId === 'player1' && player2) {
-                Object.assign(player2, data.player);
-            } else if (data.playerId === 'player2' && player) {
-                Object.assign(player, data.player);
+            if (data.playerId !== player.id && player2) {
+                player2.x = data.pos.x;
+                player2.y = data.pos.y;
+                player2.direction = data.direction;
+                player2.keys = data.keys;
+                player2.lives = data.lives;
             }
             break;
         case 'keyDown':
@@ -1602,23 +1623,7 @@ function handlePeerData(data) {
             livesDisplay.textContent = player.lives;
             break;
         case 'loadLevel':
-            currentLevel = data.levelNum;
-            if (data.state) {
-                Object.assign(player, data.state.player);
-                player2 = data.state.player2;
-                walls = data.state.walls;
-                keys = data.state.keys;
-                doors = data.state.doors;
-                npcs = data.state.npcs;
-                enemies = data.state.enemies;
-                chests = data.state.chests;
-                campfires = data.state.campfires;
-                flowers = data.state.flowers;
-                boss = data.state.boss;
-                gameObjects = data.state.gameObjects;
-            } else {
-                loadLevel(data.levelNum);
-            }
+            loadLevel(data.levelNum);
             break;
         case 'levelComplete':
             levelCompleteScreen.style.display = 'flex';
@@ -1658,7 +1663,6 @@ function handlePeerData(data) {
         case 'bossUpdate':
             if (boss) {
                 Object.assign(boss, data.boss);
-                console.log(`Получено обновление босса: здоровье=${boss.health}`);
             }
             break;
         case 'projectilesUpdate':
@@ -1686,7 +1690,7 @@ function handlePeerData(data) {
 
 // Main game loop
 function gameLoop() {
-console.log('Game loop started on client');
+    console.log('Game loop running, level:', currentLevel);
     if (titleScreen.style.display !== 'none' || gameOverScreen.style.display === 'flex' || 
         levelCompleteScreen.style.display === 'flex' || victoryScreen.style.display === 'flex' || 
         skinMenu.style.display === 'flex' || puzzleContainer.style.display === 'flex') {
@@ -1698,9 +1702,12 @@ console.log('Game loop started on client');
     if (player.lives > 0) movePlayer(player);
     if (player2 && player2.lives > 0) movePlayer(player2);
     
-    moveEnemies();
-    moveBoss();
-    moveProjectiles();
+    if (isHost || !isCoopMode) {
+        moveEnemies();
+        moveBoss();
+        moveProjectiles();
+    }
+    
     playBackgroundMusic();
     
     draw();
@@ -1839,14 +1846,22 @@ function setupSocketHandlers() {
             player2.direction = data.direction;
             player2.keys = data.keys;
             player2.lives = data.lives;
+            console.log('Player2 updated:', player2);
         }
     });
 
     socket.on('keyCollected', (data) => {
-        if (data.playerId !== socket.id && player2) {
-            player2.keys = data.totalKeys;
+        if (data.keyIndex < keys.length) {
+            keys[data.keyIndex].collected = true;
+            if (data.playerId === 'player2') {
+                player2.keys++;
+            } else {
+                player.keys++;
+            }
+            keys.splice(data.keyIndex, 1);
+            keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+            console.log('Key collected:', data);
         }
-        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
     });
 
     socket.on('playerDisconnected', (playerId) => {
@@ -1856,7 +1871,9 @@ function setupSocketHandlers() {
         }, 3000);
     });
 
-    // Добавьте другие обработчики по аналогии
+    socket.on('roomFull', (message) => {
+        showDialog([message]);
+    });
 }
 
 // Вызовите эту функцию после инициализации socket
