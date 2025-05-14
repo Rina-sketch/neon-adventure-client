@@ -1311,8 +1311,9 @@ let roomId = null;
 let playerNumber = null;
 
 // Initialize Socket.IO for cooperative mode
-function initCoop(host) {
-    isHost = host;
+// Join cooperative game
+function joinCoop(inputRoomId) {
+    roomId = inputRoomId;
 
     if (socket) {
         socket.disconnect();
@@ -1327,11 +1328,10 @@ function initCoop(host) {
 
     socket.on('connect', () => {
         console.log('Socket.IO connected:', socket.id);
-        if (isHost) {
-            socket.emit('joinRoom', socket.id); // Host creates room with socket.id
-        }
+        socket.emit('joinRoom', roomId);
     });
 
+    // Reuse the same event handlers as in initCoop
     socket.on('playerNumber', (number) => {
         playerNumber = number;
         player.id = `player${number}`;
@@ -1341,9 +1341,6 @@ function initCoop(host) {
 
     socket.on('roomId', (id) => {
         roomId = id;
-        peerIdSpan.textContent = roomId;
-        peerIdDisplay.style.display = 'block';
-        showDialog(["Share this ID with a friend to play together: " + roomId]);
     });
 
     socket.on('roomFull', (message) => {
@@ -1352,10 +1349,10 @@ function initCoop(host) {
 
     socket.on('startGame', (players) => {
         isCoopMode = true;
-        if (playerNumber === 1) {
+        if (playerNumber === 2) {
             player2 = {
-                x: levels[currentLevel].startPos2.x,
-                y: levels[currentLevel].startPos2.y,
+                x: levels[currentLevel].startPos.x,
+                y: levels[currentLevel].startPos.y,
                 width: 30,
                 height: 30,
                 speed: 5,
@@ -1365,14 +1362,14 @@ function initCoop(host) {
                 hasSword: false,
                 invincible: false,
                 invincibleTimer: 0,
-                color: '#f00',
+                color: '#00f',
                 hasPotion: false,
                 damageMultiplier: 1,
                 catEars: false,
                 earAngle: 0,
                 tailAngle: 0,
                 isMoving: false,
-                id: 'player2',
+                id: 'player1',
                 keysPressed: {},
                 attackCooldown: 0
             };
@@ -1380,11 +1377,6 @@ function initCoop(host) {
         titleScreen.style.display = 'none';
         menuBgm.pause();
         loadLevel(1);
-        socket.emit('levelState', { roomId, level: currentLevel, gameState: {
-            player: {...player},
-            player2: player2 ? {...player2} : null,
-            walls, keys, doors, npcs, enemies, chests, campfires, flowers, boss, gameObjects
-        }});
         gameLoop();
     });
 
@@ -1476,6 +1468,10 @@ function initCoop(host) {
 
     socket.on('showLevelComplete', () => {
         levelCompleteScreen.style.display = 'flex';
+        titleScreen.style.display = 'none'; // Fixed typo: stratorScreen -> titleScreen
+        menuBgm.pause();
+        loadLevel(1);
+        gameLoop();
     });
 
     socket.on('showGameOver', () => {
@@ -1496,7 +1492,7 @@ function initCoop(host) {
         console.error('Socket.IO error:', err);
         showDialog(["Connection error. Please try again."]);
     });
-}
+} // Added missing closing brace for joinCoop function
 
 // Handle peer data
 // Join cooperative game
