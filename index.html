@@ -38,185 +38,398 @@
         return gk_fileData[filename] || "";
         }
         </script><!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neon Adventure</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <title>Неоновая Бродилка</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
+            background-color: #0a0a1a;
+            color: #0ff;
+            font-family: 'Courier New', monospace;
             overflow: hidden;
-            background: #111125;
-            color: #fff;
-            font-family: Arial, sans-serif;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        canvas {
-            border: 2px solid #0ff;
-        }
-        #title-screen, #dialog, #level-complete, #game-over, #victory-screen, #skin-menu, #puzzle-container {
-            position: absolute;
-            background: rgba(0, 0, 0, 0.8);
-            border: 2px solid #0ff;
-            padding: 20px;
-            text-align: center;
-            display: none;
             flex-direction: column;
-            gap: 10px;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
         }
-        #title-screen {
-            display: flex;
-            width: 400px;
-        }
-        #dialog {
-            width: 300px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        #level-complete, #game-over, #victory-screen {
-            width: 300px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        #skin-menu {
-            width: 300px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        #puzzle-container {
-            width: 300px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        #peer-id-display {
-            display: none;
-            margin-top: 10px;
-            color: #0ff;
-        }
-        button {
-            background: #111125;
-            color: #0ff;
+        
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
             border: 2px solid #0ff;
-            padding: 10px 20px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background 0.2s;
+            box-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+            overflow: hidden;
         }
-        button:hover {
-            background: #0ff;
-            color: #111125;
+        
+        #game-canvas {
+            background-color: #111125;
+            image-rendering: pixelated;
         }
-        input {
-            background: #111125;
-            color: #0ff;
-            border: 2px solid #0ff;
-            padding: 8px;
-            font-size: 16px;
-            width: 200px;
-        }
-        .skin-option {
-            width: 50px;
-            height: 50px;
-            border: 2px solid #0ff;
-            cursor: pointer;
-            margin: 5px;
-            display: inline-block;
-        }
-        .puzzle-piece {
-            background: #111125;
-            color: #0ff;
-            border: 2px solid #0ff;
-            padding: 10px;
-            margin: 5px;
-            cursor: pointer;
-            display: inline-block;
-        }
-        .puzzle-piece:hover {
-            background: #0ff;
-            color: #111125;
-        }
-        #stats {
+        
+        #ui {
             position: absolute;
             top: 10px;
             left: 10px;
-            background: rgba(0, 0, 0, 0.5);
+            z-index: 100;
+            font-size: 18px;
+            background-color: rgba(0, 20, 40, 0.8);
             padding: 10px;
             border: 2px solid #0ff;
+            border-radius: 5px;
+            box-shadow: 0 0 10px #0ff;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .ui-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .ui-value {
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff;
+        }
+        
+        #dialog {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            background-color: rgba(0, 20, 40, 0.8);
+            border: 2px solid #0ff;
+            padding: 15px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 0 10px #0ff;
+            animation: dialogPulse 1.5s infinite;
+        }
+        
+        @keyframes dialogPulse {
+            0% { box-shadow: 0 0 10px #0ff; }
+            50% { box-shadow: 0 0 20px #0ff, 0 0 30px #0ff; }
+            100% { box-shadow: 0 0 10px #0ff; }
+        }
+        
+        #title-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #0a0a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        
+        #title {
+            font-size: 48px;
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+        
+        #single-btn, #coop-btn, #join-coop-btn {
+            background: none;
+            border: 2px solid #0ff;
+            color: #0ff;
+            padding: 10px 30px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 0 10px #0ff;
+            transition: all 0.3s;
+            text-shadow: 0 0 5px #0ff;
+            margin: 10px;
+        }
+        
+        #single-btn:hover, #coop-btn:hover, #join-coop-btn:hover {
+            background-color: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 20px #0ff;
+        }
+        
+        #coop-id-input {
+            background: rgba(0, 20, 40, 0.8);
+            border: 2px solid #0ff;
+            color: #0ff;
+            padding: 5px;
+            font-size: 18px;
+            margin: 10px;
+            text-align: center;
+        }
+        
+        #peer-id-display {
+            font-size: 18px;
+            margin: 10px;
+            background: rgba(0, 20, 40, 0.8);
+            padding: 5px 15px;
+            border: 2px solid #0ff;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 5px #0ff, 0 0 10px #0ff, 0 0 15px #0ff;
+        }
+        
+        #level-complete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 10, 20, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            font-size: 36px;
+        }
+        
+        #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(20, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            font-size: 36px;
+        }
+        
+        #skin-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 20, 40, 0.9);
+            border: 2px solid #0ff;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            z-index: 300;
+            box-shadow: 0 0 20px #0ff;
+        }
+        
+        .skin-option {
+            width: 50px;
+            height: 50px;
+            margin: 10px;
+            cursor: pointer;
+            border: 2px solid #0ff;
+            transition: all 0.3s;
+        }
+        
+        .skin-option:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        #puzzle-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 20, 40, 0.9);
+            border: 2px solid #0ff;
+            padding: 20px;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            z-index: 300;
+            box-shadow: 0 0 20px #0ff;
+        }
+        
+        .puzzle-piece {
+            width: 60px;
+            height: 60px;
+            margin: 5px;
+            cursor: pointer;
+            border: 2px solid #0ff;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 50, 100, 0.7);
+            transition: all 0.3s;
+        }
+        
+        .puzzle-piece:hover {
+            background-color: rgba(0, 100, 200, 0.7);
+            box-shadow: 0 0 10px #0ff;
+        }
+        
+        #puzzle-submit {
+            margin-top: 15px;
+            background: none;
+            border: 2px solid #0ff;
+            color: #0ff;
+            padding: 5px 15px;
+            cursor: pointer;
+        }
+        
+        #victory-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 10, 20, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            font-size: 36px;
+            animation: victoryGlow 2s infinite;
+        }
+        
+        @keyframes victoryGlow {
+            0% { background-color: rgba(0, 10, 20, 0.9); }
+            50% { background-color: rgba(0, 20, 40, 0.9); }
+            100% { background-color: rgba(0, 10, 20, 0.9); }
         }
     </style>
 </head>
 <body>
-    <div id="stats">
-        <div>Level: <span id="level">1</span></div>
-        <div>Keys: <span id="keys">0</span></div>
-        <div>Lives: <span id="lives">3</span></div>
-        <div>Objective: <span id="objective">Find the key</span></div>
+    <div id="game-container">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <div class="ui-item">Уровень: <span id="level" class="ui-value">1</span></div>
+            <div class="ui-item">Ключи: <span id="keys" class="ui-value">0</span></div>
+            <div class="ui-item">Жизни: <span id="lives" class="ui-value">3</span></div>
+            <div class="ui-item">Цель: <span id="objective" class="ui-value">Найти ключ</span></div>
+        </div>
+        <div id="dialog">
+            <p id="dialog-text"></p>
+            <button id="dialog-btn">Продолжить</button>
+        </div>
+<div id="title-screen">
+    <h1>Neon Adventure</h1>
+    <p>Choose your game mode:</p>
+    <button id="single-btn">Single Player</button>
+    <button id="coop-btn">Host Co-op Game</button>
+    <div id="peer-id-display" style="display: none;">
+        <p>Your ID: <span id="peer-id"></span></p>
     </div>
-    <canvas id="game-canvas" width="800" height="600"></canvas>
-    <div id="title-screen">
-        <h2>Neon Adventure</h2>
-        <button id="single-btn">Single Player</button>
-        <button id="coop-btn">Host Cooperative Game</button>
+    <div>
         <input id="coop-id-input" type="text" placeholder="Enter Room ID">
-        <button id="join-coop-btn">Join Cooperative Game</button>
-        <div id="peer-id-display">Room ID: <span id="peer-id"></span></div>
+        <button id="join-coop-btn">Join Co-op Game</button>
     </div>
-    <div id="dialog">
-        <p id="dialog-text"></p>
-        <button id="dialog-btn">Next</button>
-    </div>
-    <div id="level-complete">
-        <h2>Level Complete!</h2>
-        <button id="next-level-btn">Next Level</button>
-    </div>
-    <div id="game-over">
-        <h2>Game Over</h2>
-        <button id="restart-btn">Restart</button>
-    </div>
-    <div id="victory-screen">
-        <h2>You Win!</h2>
-        <button id="restart-victory-btn">Play Again</button>
-    </div>
-    <div id="skin-menu">
-        <h2>Choose Skin</h2>
-        <div>
-            <div class="skin-option" data-color="#00f" data-cat-ears="false" style="background: #00f;"></div>
-            <div class="skin-option" data-color="#f00" data-cat-ears="false" style="background: #f00;"></div>
-            <div class="skin-option" data-color="#0f0" data-cat-ears="false" style="background: #0f0;"></div>
-            <div class="skin-option" data-color="#ff0" data-cat-ears="true" style="background: #ff0;"></div>
+</div>
+        <div id="level-complete">
+            <h2 class="neon-text">Уровень пройден!</h2>
+            <button id="next-level-btn">Следующий уровень</button>
         </div>
-        <button id="close-skin-menu">Close</button>
-    </div>
-    <div id="puzzle-container">
-        <h2>Solve the Puzzle</h2>
-        <p>Sequence: <span id="puzzle-sequence"></span></p>
-        <div>
-            <div class="puzzle-piece" data-value="1">1</div>
-            <div class="puzzle-piece" data-value="2">2</div>
-            <div class="puzzle-piece" data-value="3">3</div>
-            <div class="puzzle-piece" data-value="4">4</div>
+        <div id="game-over">
+            <h2 class="neon-text">Игра окончена!</h2>
+            <button id="restart-btn">Играть снова</button>
         </div>
-        <button id="puzzle-submit">Submit</button>
+        <div id="victory-screen">
+            <h2 class="neon-text">Победа! Секретный сундук открыт!</h2>
+            <p class="neon-text">Вы нашли легендарный неоновый артефакт!</p>
+            <button id="restart-victory-btn">Продолжить</button>
+        </div>
+        <div id="skin-menu">
+            <h3>Выберите скин</h3>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+                <div class="skin-option" style="background-color: #00f;" data-color="#00f"></div>
+                <div class="skin-option" style="background-color: #f00;" data-color="#f00"></div>
+                <div class="skin-option" style="background-color: #0f0;" data-color="#0f0"></div>
+                <div class="skin-option" style="background-color: #ff0;" data-color="#ff0"></div>
+                <div class="skin-option" style="background-color: #f0f;" data-color="#f0f"></div>
+                <div class="skin-option" style="background-color: #0ff;" data-color="#0ff"></div>
+                <div class="skin-option" style="background-color: #fff; border: 2px dashed #0ff;" data-cat-ears="true"></div>
+            </div>
+            <button id="close-skin-menu" style="margin-top: 15px;">Закрыть</button>
+        </div>
+        <div id="puzzle-container">
+            <h3>Соберите последовательность: 4-2-1-3</h3>
+            <div style="display: flex;">
+                <div class="puzzle-piece" data-value="1">1</div>
+                <div class="puzzle-piece" data-value="2">2</div>
+                <div class="puzzle-piece" data-value="3">3</div>
+                <div class="puzzle-piece" data-value="4">4</div>
+            </div>
+            <div id="puzzle-sequence" style="margin: 15px 0; font-size: 20px;"></div>
+            <button id="puzzle-submit">Проверить</button>
+        </div>
+        <audio id="menu-bgm" loop>
+            <source src="assets/Toby_Fox_Home.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="bgm-normal" loop>
+            <source src="assets/Toby Fox - Ruins.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="bgm-battle" loop>
+            <source src="assets/Toby Fox - Stronger Monsters.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="hit-sound">
+            <source src="assets/hit.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="boss-hit-sound">
+            <source src="assets/boss_hit.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="damage-sound">
+            <source src="assets/damage.mp3" type="audio/mpeg">
+        </audio>
+        <audio id="chest-sound">
+            <source src="assets/chest.mp3" type="audio/mpeg">
+        </audio>
     </div>
-    <audio id="menu-bgm" src="menu-bgm.mp3" loop></audio>
-    <audio id="bgm-normal" src="bgm-normal.mp3" loop></audio>
-    <audio id="bgm-battle" src="bgm-battle.mp3" loop></audio>
-    <audio id="hit-sound" src="hit-enemy.mp3"></audio>
-    <audio id="boss-hit-sound" src="hit-boss.mp3"></audio>
-    <audio id="damage-sound" src="take-damage.mp3"></audio>
-    <audio id="chest-sound" src="chest-open.mp3"></audio>
-
-    <script src="https://neon-adventure-peerjs.onrender.com"></script>
+    <script>
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+    </script>
     <script src="game.js"></script>
 </body>
 </html>
