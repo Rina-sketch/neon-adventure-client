@@ -1819,15 +1819,13 @@ initLevels();
 singleBtn.addEventListener('click', () => {
     isCoopMode = false;
     titleScreen.style.display = 'none';
-    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
-    menuBgm.pause(); // Останавливаем после старта игры
+    menuBgm.pause();
     loadLevel(1);
     gameLoop();
 });
 
 coopBtn.addEventListener('click', () => {
-    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
-    initPeer(true);
+    initCoop(true);
 });
 
 joinCoopBtn.addEventListener('click', () => {
@@ -1836,6 +1834,5 @@ joinCoopBtn.addEventListener('click', () => {
         showDialog(["Введите ID хоста!"]);
         return;
     }
-    menuBgm.play().catch(e => console.error('Ошибка воспроизведения музыки меню:', e));
     joinCoop(peerId);
 });
