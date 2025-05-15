@@ -1848,7 +1848,7 @@ singleBtn.addEventListener('click', () => {
 });
 
 coopBtn.addEventListener('click', () => {
-    initPeer(true);
+    initHost(); // Было initPeer(true)
 });
 
 joinCoopBtn.addEventListener('click', () => {
