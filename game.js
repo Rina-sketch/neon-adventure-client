@@ -1368,6 +1368,29 @@ function initHost() {
         
         loadLevel(1);
     });
+
+    socket.on('playerJoined', (playerId) => {
+        console.log('Игрок подключился:', playerId);
+        // Отправляем состояние игры новому игроку
+        socket.emit('sendState', {
+            target: playerId,
+            state: {
+                level: currentLevel,
+                player: player,
+                player2: player2,
+                walls: walls,
+                keys: keys,
+                doors: doors,
+                npcs: npcs,
+                enemies: enemies,
+                chests: chests,
+                campfires: campfires,
+                flowers: flowers,
+                boss: boss,
+                gameObjects: gameObjects
+            }
+        });
+    });
 }
 
 function joinGame(peerId) {
@@ -1376,14 +1399,24 @@ function joinGame(peerId) {
     socket = io('https://neon-adventure-peerjs.onrender.com');
     
     socket.on('connect', () => {
+        console.log('Подключение к серверу...');
         socket.emit('joinRoom', peerId);
     });
     
     socket.on('gameState', (state) => {
-        // Принимаем состояние игры от хоста
+        console.log('Получено состояние игры:', state);
         currentLevel = state.level;
-        player = state.player2;
-        player2 = state.player;
+        player = {
+            ...state.player2,
+            id: 'player2',
+            color: '#f00'
+        };
+        player2 = {
+            ...state.player,
+            id: 'player1',
+            color: '#00f'
+        };
+        
         walls = state.walls;
         keys = state.keys;
         doors = state.doors;
@@ -1398,6 +1431,11 @@ function joinGame(peerId) {
         titleScreen.style.display = 'none';
         menuBgm.pause();
         gameLoop();
+    });
+    
+    socket.on('connect_error', (err) => {
+        console.error('Ошибка подключения:', err);
+        showDialog(["Не удалось подключиться. Проверьте ID."]);
     });
 }
 
