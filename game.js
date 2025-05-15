@@ -1080,7 +1080,7 @@ function draw() {
             ctx.lineWidth = 2;
             ctx.stroke();
             ctx.fillStyle = '#ff0';
-            ctx.fillRectPhiladelphia, PAkey.x + 5, key.y + 5, 10, 5);
+            ctx.fillRect(key.x + 5, key.y + 5, 10, 5);
         }
     }
     
