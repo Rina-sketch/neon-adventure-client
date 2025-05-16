@@ -1200,119 +1200,127 @@ function draw() {
         ctx.strokeRect(p.x, p.y, p.width, p.height);
 
 for (const id in otherPlayers) {
-    const p = otherPlayers[id];
-    if (p.lives <= 0) continue;
-
-    // Handle invincibility
-    if (p.invincible && Math.floor(Date.now() / 100) % 2 === 0) {
-        ctx.fillStyle = `rgba(${hexToRgb(p.color).r},${hexToRgb(p.color).g},${hexToRgb(p.color).b},0.5)`;
-    } else {
+        const p = otherPlayers[id];
+        if (p.lives <= 0) continue;
         ctx.fillStyle = p.color;
-    }
-    ctx.fillRect(p.x, p.y, p.width, p.height);
-    ctx.strokeStyle = '#0ff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(p.x, p.y, p.width, p.height);
-
-    // Cat ears
-    if (p.catEars) {
-        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.width, p.height);
         ctx.strokeStyle = '#0ff';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
 
-        ctx.beginPath();
-        ctx.moveTo(p.x + 5, p.y);
-        ctx.lineTo(p.x + 10, p.y - 15 + p.earAngle * 10);
-        ctx.lineTo(p.x + 15, p.y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(p.x + 15, p.y);
-        ctx.lineTo(p.x + 20, p.y - 15 - p.earAngle * 10);
-        ctx.lineTo(p.x + 25, p.y);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.strokeStyle = p.color;
-        ctx.lineWidth = 4;
-        ctx.beginPath();
-        let tailBaseX, tailBaseY;
+        ctx.fillStyle = '#fff';
         switch (p.direction) {
             case 'up':
-                tailBaseX = p.x + p.width / 2;
-                tailBaseY = p.y + p.height;
+                ctx.fillRect(p.x + 10, p.y, 10, 5);
                 break;
             case 'down':
-                tailBaseX = p.x + p.width / 2;
-                tailBaseY = p.y;
+                ctx.fillRect(p.x + 10, p.y + p.height - 5, 10, 5);
                 break;
             case 'left':
-                tailBaseX = p.x + p.width;
-                tailBaseY = p.y + p.height / 2;
+                ctx.fillRect(p.x, p.y + 10, 5, 10);
                 break;
             case 'right':
-                tailBaseX = p.x;
-                tailBaseY = p.y + p.height / 2;
+                ctx.fillRect(p.x + p.width - 5, p.y + 10, 5, 10);
                 break;
         }
-        ctx.moveTo(tailBaseX, tailBaseY);
-        ctx.quadraticCurveTo(
-            tailBaseX + 10, tailBaseY + piazz10,
-            tailBaseX + 30 * Math.cos(p.tailAngle), tailBaseY + 30 * Math.sin(p.tailAngle)
-        );
-        ctx.stroke();
     }
-
-    // Direction indicator
-    ctx.fillStyle = '#fff';
-    switch (p.direction) {
-        case 'up':
-            ctx.fillRect(p.x + 10, p.y, 10, 5);
-            break;
-        case 'down':
-            ctx.fillRect(p.x + 10, p.y + p.height - 5, 10, 5);
-            break;
-        case 'left':
-            ctx.fillRect(p.x, p.y + 10, 5, 10);
-            break;
-        case 'right':
-            ctx.fillRect(p.x + p.width - 5, p.y + 10, 5, 10);
-            break;
-    }
-
-    // Sword
-    if (p.hasSword) {
-        ctx.fillStyle = '#aaa';
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
+        if (p.catEars) {
+            ctx.fillStyle = p.color;
+            ctx.strokeStyle = '#0ff';
+            ctx.lineWidth = 1;
+            
+            ctx.beginPath();
+            ctx.moveTo(p.x + 5, p.y);
+            ctx.lineTo(p.x + 10, p.y - 15 + p.earAngle * 10);
+            ctx.lineTo(p.x + 15, p.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(p.x + 15, p.y);
+            ctx.lineTo(p.x + 20, p.y - 15 - p.earAngle * 10);
+            ctx.lineTo(p.x + 25, p.y);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            let tailBaseX, tailBaseY;
+            switch (p.direction) {
+                case 'up':
+                    tailBaseX = p.x + p.width / 2;
+                    tailBaseY = p.y + p.height;
+                    break;
+                case 'down':
+                    tailBaseX = p.x + p.width / 2;
+                    tailBaseY = p.y;
+                    break;
+                case 'left':
+                    tailBaseX = p.x + p.width;
+                    tailBaseY = p.y + p.height / 2;
+                    break;
+                case 'right':
+                    tailBaseX = p.x;
+                    tailBaseY = p.y + p.height / 2;
+                    break;
+            }
+            ctx.moveTo(tailBaseX, tailBaseY);
+            ctx.quadraticCurveTo(
+                tailBaseX + 10, tailBaseY + 10,
+                tailBaseX + 30 * Math.cos(p.tailAngle), tailBaseY + 30 * Math.sin(p.tailAngle)
+            );
+            ctx.stroke();
+        }
+        
+        ctx.fillStyle = '#fff';
         switch (p.direction) {
             case 'up':
-                ctx.fillRect(p.x + p.width / 2 - 5, p.y - 20, 10, 20);
-                ctx.strokeRect(p.x + p.width / 2 - 5, p.y - 20, 10, 20);
-                ctx.fillStyle = '#666';
-                ctx.fillRect(p.x + p.width / 2 - 10, p.y - 10, 20, 5);
+                ctx.fillRect(p.x + 10, p.y, 10, 5);
                 break;
             case 'down':
-                ctx.fillRect(p.x + p.width / 2 - 5, p.y + p.height, 10, 20);
-                ctx.strokeRect(p.x + p.width / 2 - 5, p.y + p.height, 10, 20);
-                ctx.fillStyle = '#666';
-                ctx.fillRect(p.x + p.width / 2 - 10, p.y + p.height - 5, 20, 5);
+                ctx.fillRect(p.x + 10, p.y + p.height - 5, 10, 5);
                 break;
             case 'left':
-                ctx.fillRect(p.x - 20, p.y + p.height / 2 - 5, 20, 10);
-                ctx.strokeRect(p.x - 20, p.y + p.height / 2 - 5, 20, 10);
-                ctx.fillStyle = '#666';
-                ctx.fillRect(p.x - 10, p.y + p.height / 2 - 10, 5, 20);
+                ctx.fillRect(p.x, p.y + 10, 5, 10);
                 break;
             case 'right':
-                ctx.fillRect(p.x + p.width, p.y + p.height / 2 - 5, 20, 10);
-                ctx.strokeRect(p.x + p.width, p.y + p.height / 2 - 5, 20, 10);
-                ctx.fillStyle = '#666';
-                ctx.fillRect(p.x + p.width - 5, p.y + p.height / 2 - 10, 5, 20);
+                ctx.fillRect(p.x + p.width - 5, p.y + 10, 5, 10);
                 break;
+        }
+        
+        if (p.hasSword) {
+            ctx.fillStyle = '#aaa';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 1;
+            switch (p.direction) {
+                case 'up':
+                    ctx.fillRect(p.x + p.width / 2 - 5, p.y - 20, 10, 20);
+                    ctx.strokeRect(p.x + p.width / 2 - 5, p.y - 20, 10, 20);
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(p.x + p.width / 2 - 10, p.y - 10, 20, 5);
+                    break;
+                case 'down':
+                    ctx.fillRect(p.x + p.width / 2 - 5, p.y + p.height, 10, 20);
+                    ctx.strokeRect(p.x + p.width / 2 - 5, p.y + p.height, 10, 20);
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(p.x + p.width / 2 - 10, p.y + p.height - 5, 20, 5);
+                    break;
+                case 'left':
+                    ctx.fillRect(p.x - 20, p.y + p.height / 2 - 5, 20, 10);
+                    ctx.strokeRect(p.x - 20, p.y + p.height / 2 - 5, 20, 10);
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(p.x - 10, p.y + p.height / 2 - 10, 5, 20);
+                    break;
+                case 'right':
+                    ctx.fillRect(p.x + p.width, p.y + p.height / 2 - 5, 20, 10);
+                    ctx.strokeRect(p.x + p.width, p.y + p.height / 2 - 5, 20, 10);
+                    ctx.fillStyle = '#666';
+                    ctx.fillRect(p.x + p.width - 5, p.y + p.height / 2 - 10, 5, 20);
+                    break;
+            }
         }
     }
     
@@ -1354,48 +1362,38 @@ function initSocket() {
     });
 
     socket.on('playerUpdate', (data) => {
-    if (data.playerId !== player.id) {
-        if (data.playerId === 'player1' && player2) {
-            // Update player2 for the host
-            player2.x = data.x;
-            player2.y = data.y;
-            player2.direction = data.direction;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.invincible = data.invincible || false;
-            player2.invincibleTimer = data.invincibleTimer || 0;
-            livesDisplay.textContent = player.lives;
+        if (data.playerId !== player.id && player2) {
+        // обновление player2 как раньше
+        player2.x = data.x;
+        player2.y = data.y;
+        player2.direction = data.direction;
+        player2.keys = data.keys;
+        player2.lives = data.lives;
+        player2.hasSword = data.hasSword;
+        player2.hasPotion = data.hasPotion;
+        player2.damageMultiplier = data.damageMultiplier;
+        player2.catEars = data.catEars;
+        player2.invincible = data.invincible || false;
+        player2.invincibleTimer = data.invincibleTimer || 0;
+        livesDisplay.textContent = player.lives;
+    } else if (data.playerId !== player.id) {
+        // если другой игрок не player2, запишем его в otherPlayers
+        if (!otherPlayers[data.playerId]) {
+            otherPlayers[data.playerId] = {
+                x: data.x,
+                y: data.y,
+                width: 30,
+                height: 30,
+                direction: data.direction,
+                color: '#f00',
+                lives: data.lives
+            };
         } else {
-            // Update other players
-            if (!otherPlayers[data.playerId]) {
-                otherPlayers[data.playerId] = {
-                    x: data.x,
-                    y: data.y,
-                    width: 30,
-                    height: 30,
-                    direction: data.direction,
-                    color: '#f00',
-                    lives: data.lives,
-                    hasSword: data.hasSword,
-                    hasPotion: data.hasPotion,
-                    damageMultiplier: data.damageMultiplier,
-                    catEars: data.catEars
-                };
-            } else {
-                const p = otherPlayers[data.playerId];
-                p.x = data.x;
-                p.y = data.y;
-                p.direction = data.direction;
-                p.lives = data.lives;
-                p.hasSword = data.hasSword;
-                p.hasPotion = data.hasPotion;
-                p.damageMultiplier = data.damageMultiplier;
-                p.catEars = data.catEars;
-            }
+            const p = otherPlayers[data.playerId];
+            p.x = data.x;
+            p.y = data.y;
+            p.direction = data.direction;
+            p.lives = data.lives;
         }
     }
 });
@@ -1620,37 +1618,30 @@ function joinCoop(peerId) {
         socket.emit('joinRoom', roomId);
     });
 
-socket.on('gameState', (state) => {
-    currentLevel = state.level;
-    player = { ...state.player2, id: 'player2', color: '#f00' };
-    player2 = { ...state.player, id: 'player1', color: '#00f' }; // Host's player
-    walls = state.walls.map(w => ({ ...w }));
-    keys = state.keys.map(k => ({ ...k }));
-    doors = state.doors.map(d => ({ ...d }));
-    npcs = state.npcs.map(n => ({ ...n }));
-    enemies = state.enemies.map(e => ({ ...e }));
-    chests = state.chests.map(c => ({ ...c }));
-    campfires = state.campfires.map(c => ({ ...c }));
-    flowers = state.flowers.map(f => ({ ...f }));
-    boss = state.boss ? { ...state.boss } : null;
-    gameObjects = state.gameObjects.map(o => ({ ...o }));
+    socket.on('gameState', (state) => {
+        currentLevel = state.level;
+        player = { ...state.player2, id: 'player2', color: '#f00' };
+        player2 = { ...state.player, id: 'player1', color: '#00f' };
+        walls = state.walls.map(w => ({ ...w }));
+        keys = state.keys.map(k => ({ ...k }));
+        doors = state.doors.map(d => ({ ...d }));
+        npcs = state.npcs.map(n => ({ ...n }));
+        enemies = state.enemies.map(e => ({ ...e }));
+        chests = state.chests.map(c => ({ ...c }));
+        campfires = state.campfires.map(c => ({ ...c }));
+        flowers = state.flowers.map(f => ({ ...f }));
+        boss = state.boss ? { ...state.boss } : null;
+        gameObjects = state.gameObjects.map(o => ({ ...o }));
 
-    // Ensure player2 has all necessary properties
-    player2.keysPressed = {};
-    player2.attackCooldown = 0;
-    player2.isMoving = false;
-    player2.earAngle = 0;
-    player2.tailAngle = 0;
+        levelDisplay.textContent = currentLevel;
+        objectiveDisplay.textContent = levels[currentLevel].objective;
+        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+        livesDisplay.textContent = player.lives;
 
-    levelDisplay.textContent = currentLevel;
-    objectiveDisplay.textContent = levels[currentLevel].objective;
-    keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-    livesDisplay.textContent = player.lives;
-
-    titleScreen.style.display = 'none';
-    menuBgm.pause();
-    gameLoop();
-});
+        titleScreen.style.display = 'none';
+        menuBgm.pause();
+        gameLoop();
+    });
 }
 
 // Main game loop
