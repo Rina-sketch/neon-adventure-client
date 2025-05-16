@@ -1315,7 +1315,6 @@ for (const id in otherPlayers) {
                 break;
         }
     }
-}
     
     ctx.shadowBlur = 0;
 }
