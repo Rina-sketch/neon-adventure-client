@@ -582,7 +582,12 @@ function movePlayer(p) {
             hasSword: p.hasSword,
             hasPotion: p.hasPotion,
             damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars
+            catEars: p.catEars,
+            isMoving: p.isMoving,
+            earAngle: p.earAngle,
+            tailAngle: p.tailAngle,
+            invincible: p.invincible,
+            invincibleTimer: p.invincibleTimer
         });
     }
 }
@@ -1348,6 +1353,9 @@ function initSocket() {
             player2.catEars = data.catEars;
             player2.invincible = data.invincible || false;
             player2.invincibleTimer = data.invincibleTimer || 0;
+            player2.isMoving = data.isMoving || false;
+            player2.earAngle = data.earAngle || 0;
+            player2.tailAngle = data.tailAngle || 0;
             livesDisplay.textContent = player.lives;
         }
     });
@@ -1438,8 +1446,10 @@ function initSocket() {
     });
 
     socket.on('bossUpdate', (data) => {
-        if (boss) {
-            Object.assign(boss, data.boss);
+        if (data.boss) {
+            boss = { ...data.boss };
+        } else {
+            boss = null;
         }
     });
 
@@ -1541,16 +1551,16 @@ function initHost() {
                 level: currentLevel,
                 player: { ...player, id: 'player1' },
                 player2: { ...player2, id: 'player2' },
-                walls,
-                keys,
-                doors,
-                npcs,
-                enemies,
-                chests,
-                campfires,
-                flowers,
-                boss,
-                gameObjects
+                walls: walls.map(w => ({ ...w })),
+                keys: keys.map(k => ({ ...k })),
+                doors: doors.map(d => ({ ...d })),
+                npcs: npcs.map(n => ({ ...n })),
+                enemies: enemies.map(e => ({ ...e })),
+                chests: chests.map(c => ({ ...c })),
+                campfires: campfires.map(c => ({ ...c })),
+                flowers: flowers.map(f => ({ ...f })),
+                boss: boss ? { ...boss } : null,
+                gameObjects: gameObjects.map(o => ({ ...o }))
             }
         });
     });
@@ -1574,8 +1584,8 @@ function joinCoop(peerId) {
 
     socket.on('gameState', (state) => {
         currentLevel = state.level;
-        player = { ...state.player2, id: 'player2', color: '#f00' };
-        player2 = { ...state.player, id: 'player1', color: '#00f' };
+        player = { ...state.player2, id: 'player2', color: '#f00', keysPressed: {} };
+        player2 = { ...state.player, id: 'player1', color: '#00f', keysPressed: {} };
         walls = state.walls.map(w => ({ ...w }));
         keys = state.keys.map(k => ({ ...k }));
         doors = state.doors.map(d => ({ ...d }));
