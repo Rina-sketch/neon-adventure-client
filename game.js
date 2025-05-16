@@ -582,13 +582,7 @@ function movePlayer(p) {
             hasSword: p.hasSword,
             hasPotion: p.hasPotion,
             damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars,
-            color: p.color,
-            invincible: p.invincible,
-            invincibleTimer: p.invincibleTimer,
-            attackCooldown: p.attackCooldown,
-            isMoving: p.isMoving,
-            keysPressed: p.keysPressed
+            catEars: p.catEars
         });
     }
 }
@@ -789,14 +783,16 @@ function checkBossCollision(p) {
 
 // Player attack
 function attack(p) {
-if (p.attackCooldown > 0 && p.hasSword) {
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    if (p.attackCooldown > 0) return;
+    
+    p.attackCooldown = 30;
+    
+    const attackRange = 40;
     let attackX = p.x;
     let attackY = p.y;
     let attackWidth = p.width;
     let attackHeight = p.height;
-    const attackRange = 40;
-
+    
     switch (p.direction) {
         case 'up':
             attackY -= attackRange;
@@ -815,9 +811,6 @@ if (p.attackCooldown > 0 && p.hasSword) {
             attackWidth = attackRange;
             break;
     }
-
-    ctx.fillRect(attackX, attackY, attackWidth, attackHeight);
-}
     
     for (let i = 0; i < enemies.length; i++) {
         const enemy = enemies[i];
@@ -1344,24 +1337,18 @@ function initSocket() {
 
     socket.on('playerUpdate', (data) => {
         if (data.playerId !== player.id && player2) {
-        player2.x = data.x;
-        player2.y = data.y;
-        player2.direction = data.direction;
-        player2.keys = data.keys;
-        player2.lives = data.lives;
-        player2.hasSword = data.hasSword;
-        player2.hasPotion = data.hasPotion;
-        player2.damageMultiplier = data.damageMultiplier;
-        player2.catEars = data.catEars;
-        player2.color = data.color;
-        player2.invincible = data.invincible || false;
-        player2.invincibleTimer = data.invincibleTimer || 0;
-        player2.attackCooldown = data.attackCooldown || 0;
-        player2.isMoving = data.isMoving || false;
-        player2.keysPressed = data.keysPressed || {};
-        livesDisplay.textContent = player.lives;
-        keysDisplay.textContent = player.keys + player2.keys;
-        console.log('Received playerUpdate for player2:', { x: data.x, y: data.y, direction: data.direction, isMoving: data.isMoving });
+            player2.x = data.x;
+            player2.y = data.y;
+            player2.direction = data.direction;
+            player2.keys = data.keys;
+            player2.lives = data.lives;
+            player2.hasSword = data.hasSword;
+            player2.hasPotion = data.hasPotion;
+            player2.damageMultiplier = data.damageMultiplier;
+            player2.catEars = data.catEars;
+            player2.invincible = data.invincible || false;
+            player2.invincibleTimer = data.invincibleTimer || 0;
+            livesDisplay.textContent = player.lives;
         }
     });
 
@@ -1378,33 +1365,33 @@ function initSocket() {
     });
 
     socket.on('keyCollected', (data) => {
-        if (data.keyIndex >= 0 && data.keyIndex < keys.length) {
-        keys[data.keyIndex].collected = true;
-        if (data.playerId === player.id) {
-            player.keys++;
-        } else if (player2) {
-            player2.keys++;
+        if (data.keyIndex < keys.length) {
+            keys[data.keyIndex].collected = true;
+            if (data.playerId === player.id) {
+                player.keys++;
+            } else if (player2) {
+                player2.keys++;
+            }
+            keys.splice(data.keyIndex, 1);
+            keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
         }
-        keys.splice(data.keyIndex, 1);
-        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
-    }
     });
 
     socket.on('doorUnlocked', (data) => {
-        if (data.doorIndex >= 0 && data.doorIndex < doors.length) {
+        if (data.doorIndex < doors.length) {
             doors[data.doorIndex].locked = false;
         }
     });
 
     socket.on('chestOpened', (data) => {
-        if (data.chestIndex >= 0 && data.chestIndex < chests.length) {
-        chests[data.chestIndex].opened = true;
-        if (chests[data.chestIndex].contains === 'sword') {
-            if (data.playerId === player.id) {
-                player.hasSword = true;
-            } else if (player2) {
-                player2.hasSword = true;
-            }
+        if (data.chestIndex < chests.length) {
+            chests[data.chestIndex].opened = true;
+            if (chests[data.chestIndex].contains === 'sword') {
+                if (data.playerId === player.id) {
+                    player.hasSword = true;
+                } else if (player2) {
+                    player2.hasSword = true;
+                }
             }
         }
     });
@@ -1621,13 +1608,13 @@ function gameLoop() {
         return;
     }
     
-if (player.lives > 0) movePlayer(player);
-if (isHost && player2 && player2.lives > 0) movePlayer(player2); // Only host moves player2
-
-if (isHost || !isCoopMode) {
-    moveEnemies();
-    moveBoss();
-    moveProjectiles();
+    if (player.lives > 0) movePlayer(player);
+    if (player2 && player2.lives > 0) movePlayer(player2);
+    
+    if (isHost || !isCoopMode) {
+        moveEnemies();
+        moveBoss();
+        moveProjectiles();
     }
     
     playBackgroundMusic();
