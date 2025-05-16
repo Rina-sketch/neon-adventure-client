@@ -60,6 +60,7 @@ let player = {
     keysPressed: {},
     attackCooldown: 0
 };
+let otherPlayers = {};
 let player2 = null;
 let levels = [];
 let walls = [];
@@ -1197,7 +1198,32 @@ function draw() {
         ctx.strokeStyle = '#0ff';
         ctx.lineWidth = 2;
         ctx.strokeRect(p.x, p.y, p.width, p.height);
-        
+
+for (const id in otherPlayers) {
+        const p = otherPlayers[id];
+        if (p.lives <= 0) continue;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.width, p.height);
+        ctx.strokeStyle = '#0ff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
+
+        ctx.fillStyle = '#fff';
+        switch (p.direction) {
+            case 'up':
+                ctx.fillRect(p.x + 10, p.y, 10, 5);
+                break;
+            case 'down':
+                ctx.fillRect(p.x + 10, p.y + p.height - 5, 10, 5);
+                break;
+            case 'left':
+                ctx.fillRect(p.x, p.y + 10, 5, 10);
+                break;
+            case 'right':
+                ctx.fillRect(p.x + p.width - 5, p.y + 10, 5, 10);
+                break;
+        }
+    }
         if (p.catEars) {
             ctx.fillStyle = p.color;
             ctx.strokeStyle = '#0ff';
@@ -1337,20 +1363,40 @@ function initSocket() {
 
     socket.on('playerUpdate', (data) => {
         if (data.playerId !== player.id && player2) {
-            player2.x = data.x;
-            player2.y = data.y;
-            player2.direction = data.direction;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.invincible = data.invincible || false;
-            player2.invincibleTimer = data.invincibleTimer || 0;
-            livesDisplay.textContent = player.lives;
+        // обновление player2 как раньше
+        player2.x = data.x;
+        player2.y = data.y;
+        player2.direction = data.direction;
+        player2.keys = data.keys;
+        player2.lives = data.lives;
+        player2.hasSword = data.hasSword;
+        player2.hasPotion = data.hasPotion;
+        player2.damageMultiplier = data.damageMultiplier;
+        player2.catEars = data.catEars;
+        player2.invincible = data.invincible || false;
+        player2.invincibleTimer = data.invincibleTimer || 0;
+        livesDisplay.textContent = player.lives;
+    } else if (data.playerId !== player.id) {
+        // если другой игрок не player2, запишем его в otherPlayers
+        if (!otherPlayers[data.playerId]) {
+            otherPlayers[data.playerId] = {
+                x: data.x,
+                y: data.y,
+                width: 30,
+                height: 30,
+                direction: data.direction,
+                color: '#f00',
+                lives: data.lives
+            };
+        } else {
+            const p = otherPlayers[data.playerId];
+            p.x = data.x;
+            p.y = data.y;
+            p.direction = data.direction;
+            p.lives = data.lives;
         }
-    });
+    }
+});
 
     socket.on('keyDown', (data) => {
         if (data.playerId !== player.id && player2) {
