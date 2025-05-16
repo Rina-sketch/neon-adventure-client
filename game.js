@@ -582,7 +582,9 @@ function movePlayer(p) {
             hasSword: p.hasSword,
             hasPotion: p.hasPotion,
             damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars
+            catEars: p.catEars,
+            attackCooldown: p.attackCooldown,
+            isMoving: p.isMoving
         });
     }
 }
@@ -1348,6 +1350,8 @@ function initSocket() {
             player2.catEars = data.catEars;
             player2.invincible = data.invincible || false;
             player2.invincibleTimer = data.invincibleTimer || 0;
+            player2.attackCooldown = data.attackCooldown || 0;
+            player2.isMoving = data.isMoving || false;
             livesDisplay.textContent = player.lives;
         }
     });
@@ -1365,33 +1369,33 @@ function initSocket() {
     });
 
     socket.on('keyCollected', (data) => {
-        if (data.keyIndex < keys.length) {
-            keys[data.keyIndex].collected = true;
-            if (data.playerId === player.id) {
-                player.keys++;
-            } else if (player2) {
-                player2.keys++;
-            }
-            keys.splice(data.keyIndex, 1);
-            keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+        if (data.keyIndex >= 0 && data.keyIndex < keys.length) {
+        keys[data.keyIndex].collected = true;
+        if (data.playerId === player.id) {
+            player.keys++;
+        } else if (player2) {
+            player2.keys++;
         }
+        keys.splice(data.keyIndex, 1);
+        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+    }
     });
 
     socket.on('doorUnlocked', (data) => {
-        if (data.doorIndex < doors.length) {
+        if (data.doorIndex >= 0 && data.doorIndex < doors.length) {
             doors[data.doorIndex].locked = false;
         }
     });
 
     socket.on('chestOpened', (data) => {
-        if (data.chestIndex < chests.length) {
-            chests[data.chestIndex].opened = true;
-            if (chests[data.chestIndex].contains === 'sword') {
-                if (data.playerId === player.id) {
-                    player.hasSword = true;
-                } else if (player2) {
-                    player2.hasSword = true;
-                }
+        if (data.chestIndex >= 0 && data.chestIndex < chests.length) {
+        chests[data.chestIndex].opened = true;
+        if (chests[data.chestIndex].contains === 'sword') {
+            if (data.playerId === player.id) {
+                player.hasSword = true;
+            } else if (player2) {
+                player2.hasSword = true;
+            }
             }
         }
     });
