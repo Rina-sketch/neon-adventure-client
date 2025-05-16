@@ -1314,11 +1314,10 @@ for (const id in otherPlayers) {
                 ctx.fillRect(p.x + p.width - 5, p.y + p.height / 2 - 10, 5, 20);
                 break;
         }
-    }
-}    
+    }    
     ctx.shadowBlur = 0;
 }
-
+}
 // Initialize Socket.IO for cooperative mode
 function initSocket() {
     socket = io('https://neon-adventure-peerjs.onrender.com', {
