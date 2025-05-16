@@ -587,7 +587,8 @@ function movePlayer(p) {
             earAngle: p.earAngle,
             tailAngle: p.tailAngle,
             invincible: p.invincible,
-            invincibleTimer: p.invincibleTimer
+            invincibleTimer: p.invincibleTimer,
+            attackCooldown: p.attackCooldown
         });
     }
 }
@@ -1356,7 +1357,9 @@ function initSocket() {
             player2.isMoving = data.isMoving || false;
             player2.earAngle = data.earAngle || 0;
             player2.tailAngle = data.tailAngle || 0;
+            player2.attackCooldown = data.attackCooldown || 0;
             livesDisplay.textContent = player.lives;
+            keysDisplay.textContent = player.keys + player2.keys;
         }
     });
 
@@ -1498,6 +1501,34 @@ function initSocket() {
     socket.on('puzzleReset', () => {
         puzzleAttempt = [];
         puzzleSequence.textContent = '';
+    });
+
+    socket.on('gameState', (state) => {
+        currentLevel = state.level;
+        player = { ...state.player2, id: 'player2', color: '#f00', keysPressed: {} };
+        player2 = { ...state.player, id: 'player1', color: '#00f', keysPressed: {} };
+        walls = state.walls.map(w => ({ ...w }));
+        keys = state.keys.map(k => ({ ...k }));
+        doors = state.doors.map(d => ({ ...d }));
+        npcs = state.npcs.map(n => ({ ...n }));
+        enemies = state.enemies.map(e => ({ ...e }));
+        chests = state.chests.map(c => ({ ...c }));
+        campfires = state.campfires.map(c => ({ ...c }));
+        flowers = state.flowers.map(f => ({ ...f }));
+        boss = state.boss ? { ...state.boss } : null;
+        gameObjects = state.gameObjects.map(o => ({ ...o }));
+        puzzleAttempt = [...state.puzzleAttempt];
+        puzzleSolution = [...state.puzzleSolution];
+        bossDefeated = state.bossDefeated;
+
+        levelDisplay.textContent = currentLevel;
+        objectiveDisplay.textContent = levels[currentLevel].objective;
+        keysDisplay.textContent = player.keys + (player2 ? player2.keys : 0);
+        livesDisplay.textContent = player.lives;
+
+        titleScreen.style.display = 'none';
+        menuBgm.pause();
+        gameLoop();
     });
 }
 
