@@ -1290,6 +1290,7 @@ for (const id in otherPlayers) {
                 ctx.fillRect(p.x + p.width - 5, p.y + 10, 5, 10);
                 break;
         }
+<<<<<<< HEAD
         
         if (p.hasSword) {
             ctx.fillStyle = '#aaa';
@@ -1324,9 +1325,12 @@ for (const id in otherPlayers) {
         }
     }
     
+=======
+    }    
+>>>>>>> 9802a976ea9bd6ca3736819790cbd5b28067b485
     ctx.shadowBlur = 0;
 }
-
+}
 // Initialize Socket.IO for cooperative mode
 function initSocket() {
     socket = io('https://neon-adventure-peerjs.onrender.com', {
