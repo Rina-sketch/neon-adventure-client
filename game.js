@@ -571,7 +571,7 @@ function movePlayer(p) {
         p.attackCooldown--;
     }
     
-    if (isCoopMode && socket && isHost) {
+    if (isCoopMode && socket) {
         socket.emit('playerUpdate', {
             roomId,
             playerId: p.id,
@@ -583,9 +583,7 @@ function movePlayer(p) {
             hasSword: p.hasSword,
             hasPotion: p.hasPotion,
             damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars,
-            invincible: p.invincible,
-            invincibleTimer: p.invincibleTimer
+            catEars: p.catEars
         });
     }
 }
@@ -1363,54 +1361,23 @@ function initSocket() {
         }, 3000);
     });
 
-socket.on('playerUpdate', (data) => {
-    if (data.playerId === player.id) {
-        // Это обновление нашего игрока, игнорируем (мы уже знаем его состояние)
-        return;
-    }
-
-    if (data.playerId === 'player1' || data.playerId === 'player2') {
-        // Это обновление второго игрока (player2)
-        if (!player2) {
-            player2 = {
-                x: data.x,
-                y: data.y,
-                width: 30,
-                height: 30,
-                speed: 5,
-                direction: data.direction,
-                keys: data.keys,
-                lives: data.lives,
-                hasSword: data.hasSword,
-                invincible: data.invincible || false,
-                invincibleTimer: data.invincibleTimer || 0,
-                color: data.playerId === 'player1' ? '#00f' : '#f00',
-                hasPotion: data.hasPotion,
-                damageMultiplier: data.damageMultiplier,
-                catEars: data.catEars,
-                earAngle: 0,
-                tailAngle: 0,
-                isMoving: false,
-                id: data.playerId,
-                keysPressed: {},
-                attackCooldown: 0
-            };
-        } else {
-            player2.x = data.x;
-            player2.y = data.y;
-            player2.direction = data.direction;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.invincible = data.invincible || false;
-            player2.invincibleTimer = data.invincibleTimer || 0;
-        }
+    socket.on('playerUpdate', (data) => {
+        if (data.playerId !== player.id && player2) {
+        // обновление player2 как раньше
+        player2.x = data.x;
+        player2.y = data.y;
+        player2.direction = data.direction;
+        player2.keys = data.keys;
+        player2.lives = data.lives;
+        player2.hasSword = data.hasSword;
+        player2.hasPotion = data.hasPotion;
+        player2.damageMultiplier = data.damageMultiplier;
+        player2.catEars = data.catEars;
+        player2.invincible = data.invincible || false;
+        player2.invincibleTimer = data.invincibleTimer || 0;
         livesDisplay.textContent = player.lives;
-    } else {
-        // Это другой игрок (если их больше двух)
+    } else if (data.playerId !== player.id) {
+        // если другой игрок не player2, запишем его в otherPlayers
         if (!otherPlayers[data.playerId]) {
             otherPlayers[data.playerId] = {
                 x: data.x,
@@ -1582,31 +1549,28 @@ function initHost() {
         peerIdDisplay.style.display = 'block';
         showDialog(["Поделитесь этим ID с другом: " + roomId]);
 
-        player.id = 'player1';
-        player.color = '#00f';
-
         player2 = {
-             x: levels[1].startPos2.x,
-             y: levels[1].startPos2.y,
-             width: 30,
-             height: 30,
-             speed: 5,
-             direction: 'right',
-             keys: 0,
-             lives: 3,
-             hasSword: false,
-             invincible: false,
-             invincibleTimer: 0,
-             color: '#f00',
-             hasPotion: false,
-             damageMultiplier: 1,
-             catEars: false,
-             earAngle: 0,
-             tailAngle: 0,
-             isMoving: false,
-             id: 'player2',
-             keysPressed: {},
-             attackCooldown: 0
+            x: levels[1].startPos2.x,
+            y: levels[1].startPos2.y,
+            width: 30,
+            height: 30,
+            speed: 5,
+            direction: 'right',
+            keys: 0,
+            lives: 3,
+            hasSword: false,
+            invincible: false,
+            invincibleTimer: 0,
+            color: '#f00',
+            hasPotion: false,
+            damageMultiplier: 1,
+            catEars: false,
+            earAngle: 0,
+            tailAngle: 0,
+            isMoving: false,
+            id: 'player2',
+            keysPressed: {},
+            attackCooldown: 0
         };
 
         loadLevel(1);
@@ -1656,8 +1620,8 @@ function joinCoop(peerId) {
 
     socket.on('gameState', (state) => {
         currentLevel = state.level;
-        player = { ...state.player2, id: 'player2', color: '#f00', keysPressed: {}, attackCooldown: 0 };
-        player2 = { ...state.player, id: 'player1', color: '#00f', keysPressed: {}, attackCooldown: 0};
+        player = { ...state.player2, id: 'player2', color: '#f00' };
+        player2 = { ...state.player, id: 'player1', color: '#00f' };
         walls = state.walls.map(w => ({ ...w }));
         keys = state.keys.map(k => ({ ...k }));
         doors = state.doors.map(d => ({ ...d }));
@@ -1691,9 +1655,7 @@ function gameLoop() {
     }
     
     if (player.lives > 0) movePlayer(player);
-    if (isCoopMode && !isHost && player2 && player2.lives > 0) {
-        movePlayer(player2);
-    }
+    if (player2 && player2.lives > 0) movePlayer(player2);
     
     if (isHost || !isCoopMode) {
         moveEnemies();
