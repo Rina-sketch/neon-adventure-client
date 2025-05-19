@@ -1363,6 +1363,7 @@ function initSocket() {
 
     socket.on('playerUpdate', (data) => {
         if (data.playerId !== player.id && player2) {
+        console.log('Updating player2:', data);
         
         player2.x = data.x;
         player2.y = data.y;
@@ -1376,25 +1377,6 @@ function initSocket() {
         player2.invincible = data.invincible || false;
         player2.invincibleTimer = data.invincibleTimer || 0;
         livesDisplay.textContent = player.lives;
-    } else if (data.playerId !== player.id) {
-        
-        if (!otherPlayers[data.playerId]) {
-            otherPlayers[data.playerId] = {
-                x: data.x,
-                y: data.y,
-                width: 30,
-                height: 30,
-                direction: data.direction,
-                color: '#f00',
-                lives: data.lives
-            };
-        } else {
-            const p = otherPlayers[data.playerId];
-            p.x = data.x;
-            p.y = data.y;
-            p.direction = data.direction;
-            p.lives = data.lives;
-        }
     }
 });
 
