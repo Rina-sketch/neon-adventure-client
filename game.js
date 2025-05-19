@@ -1691,7 +1691,9 @@ function gameLoop() {
     }
     
     if (player.lives > 0) movePlayer(player);
-    if (player2 && player2.lives > 0) movePlayer(player2);
+    if (isCoopMode && !isHost && player2 && player2.lives > 0) {
+        movePlayer(player2);
+    }
     
     if (isHost || !isCoopMode) {
         moveEnemies();
