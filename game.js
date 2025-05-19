@@ -1362,9 +1362,9 @@ function initSocket() {
     });
 
     socket.on('playerUpdate', (data) => {
-        if (data.playerId !== player.id && player2) {
-        console.log('Updating player2:', data);
-        
+    if (isHost) return; // Хост сам управляет своим состоянием
+
+    if (data.playerId === 'player1') {
         player2.x = data.x;
         player2.y = data.y;
         player2.direction = data.direction;
@@ -1376,7 +1376,6 @@ function initSocket() {
         player2.catEars = data.catEars;
         player2.invincible = data.invincible || false;
         player2.invincibleTimer = data.invincibleTimer || 0;
-        livesDisplay.textContent = player.lives;
     }
 });
 
