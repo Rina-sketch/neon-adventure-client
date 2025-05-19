@@ -1722,6 +1722,7 @@ skinOptions.forEach(option => {
 
 puzzlePieces.forEach(piece => {
     piece.addEventListener('click', () => {
+        if (!isHost) return;
         if (puzzleAttempt.length < 4) {
             puzzleAttempt.push(parseInt(piece.dataset.value));
             puzzleSequence.textContent = puzzleAttempt.join('-');
