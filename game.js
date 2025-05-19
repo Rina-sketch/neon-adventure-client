@@ -35,7 +35,7 @@ const sfxHitBoss = document.getElementById('boss-hit-sound');
 const sfxTakeDamage = document.getElementById('damage-sound');
 const sfxChestOpen = document.getElementById('chest-sound');
 
-// Game variables
+
 let currentLevel = 1;
 let player = {
     x: 50,
@@ -83,7 +83,7 @@ let isHost = false;
 let socket = null;
 let roomId = null;
 
-// Input handling
+
 const keysPressed = {
     ArrowUp: false,
     ArrowDown: false,
@@ -93,7 +93,7 @@ const keysPressed = {
     KeyC: false
 };
 
-// Pixel art Echo Flower sprites
+
 const echoFlowerFrames = [
     [
         ['#00000000', '#00000000', '#00000000', '#00000000', '#00000000', '#00000000', '#00000000', '#00000000'],
@@ -117,7 +117,7 @@ const echoFlowerFrames = [
     ]
 ];
 
-// Function to draw pixel art Echo Flower
+
 function drawPixelArtFlower(flower) {
     const pixelSize = 4;
     const frame = echoFlowerFrames[Math.floor(frameCount / 20) % 2];
@@ -143,7 +143,7 @@ function drawPixelArtFlower(flower) {
     ctx.shadowBlur = 0;
 }
 
-// Pixel art campfire sprites
+
 const campfireFrames = [
     [
         ['#00000000', '#00000000', '#00000000', '#00000000', '#00000000', '#00000000', '#00000000', '#00000000'],
@@ -167,7 +167,7 @@ const campfireFrames = [
     ]
 ];
 
-// Function to draw pixel art campfire
+
 function drawPixelArtCampfire(campfire) {
     const pixelSize = 4;
     const frame = campfireFrames[Math.floor(frameCount / 20) % 2];
@@ -191,7 +191,7 @@ function drawPixelArtCampfire(campfire) {
     ctx.shadowColor = '#FF5500';
 }
 
-// Initialize levels
+
 function initLevels() {
     levels[1] = {
         walls: [
@@ -265,7 +265,7 @@ function initLevels() {
         npcs: [
             {
                 x: 100, y: 500, width: 30, height: 30, 
-                dialog: ["Этот лабиринт полон врагов", "Тебе нужно собрать 2 ключа."],
+                dialog: ["Этот лабиринт полон врагов. Будь осторожен.", "Тебе нужно собрать 2 ключа что бы пройти на следующий уровень."],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -312,7 +312,7 @@ function initLevels() {
         npcs: [
             {
                 x: 400, y: 100, width: 30, height: 30, 
-                dialog: ["Реши мою головоломку!", "Последовательность: 4-2-1-3", "Удачи, герой!"],
+                dialog: ["Удачи, герой!"],
                 dialogIndex: 0,
                 hasPuzzle: true,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
@@ -342,17 +342,17 @@ function initLevels() {
             {x: 0, y: 0, width: 20, height: 600},
             {x: 0, y: 580, width: 800, height: 20},
             {x: 780, y: 0, width: 20, height: 600},
-            {x: 100, y: 100, width: 600, height: 20},
-            {x: 100, y: 100, width: 20, height: 400},
-            {x: 100, y: 480, width: 600, height: 20},
-            {x: 680, y: 100, width: 20, height: 400}
+            //{x: 100, y: 100, width: 600, height: 20},
+            //{x: 100, y: 100, width: 20, height: 400},
+            //{x: 100, y: 480, width: 600, height: 20},
+            //{x: 680, y: 100, width: 20, height: 400}
         ],
         keys: [],
         doors: [],
         npcs: [
             {
                 x: 50, y: 300, width: 30, height: 30, 
-                dialog: ["Спаси меня, герой!", "Босса нужно ударить 5 раз!", "Нажми C, чтобы открыть меню скинов."],
+                dialog: ["Спаси меня, герой!"],
                 dialogIndex: 0,
                 blinkTimer: Math.floor(Math.random() * 60) + 60,
                 blinkState: true
@@ -380,7 +380,7 @@ function initLevels() {
     };
 }
 
-// Load level
+
 function loadLevel(levelNum) {
     currentLevel = levelNum;
     const level = levels[levelNum];
@@ -459,7 +459,7 @@ function loadLevel(levelNum) {
     }
 }
 
-// Manage background music
+
 function playBackgroundMusic() {
     const isBattle = enemies.some(enemy => enemy.active);
     if (isBattle) {
@@ -477,7 +477,7 @@ function playBackgroundMusic() {
     }
 }
 
-// Input handling
+
 document.addEventListener('keydown', (e) => {
     if (e.code in keysPressed) {
         keysPressed[e.code] = true;
@@ -505,7 +505,7 @@ document.addEventListener('keyup', (e) => {
     }
 });
 
-// Move player
+
 function movePlayer(p) {
     let newX = p.x;
     let newY = p.y;
@@ -588,7 +588,7 @@ function movePlayer(p) {
     }
 }
 
-// Check wall collisions
+
 function checkWallCollision(x, y, width, height) {
     for (const wall of walls) {
         if (x < wall.x + wall.width &&
@@ -601,7 +601,7 @@ function checkWallCollision(x, y, width, height) {
     return false;
 }
 
-// Check key collisions
+
 function checkKeyCollisions(p) {
     for (let i = 0; i < keys.length; i++) {
         const key = keys[i];
@@ -624,7 +624,7 @@ function checkKeyCollisions(p) {
     }
 }
 
-// Check door collisions
+
 function checkDoorCollisions(p) {
     for (const door of doors) {
         if (p.x < door.x + door.width &&
@@ -661,7 +661,7 @@ function checkDoorCollisions(p) {
     }
 }
 
-// Check NPC collisions
+
 function checkNPCCollisions(p) {
     for (const npc of npcs) {
         if (p.x < npc.x + npc.width &&
@@ -682,7 +682,7 @@ function checkNPCCollisions(p) {
     }
 }
 
-// Check chest collisions
+
 function checkChestCollisions(p) {
     for (const chest of chests) {
         if (!chest.opened &&
@@ -705,7 +705,7 @@ function checkChestCollisions(p) {
     }
 }
 
-// Check enemy collisions
+
 function checkEnemyCollisions(p) {
     if (p.invincible) return;
     
@@ -745,7 +745,7 @@ function checkEnemyCollisions(p) {
     }
 }
 
-// Check boss collision
+
 function checkBossCollision(p) {
     if (p.invincible || !boss) return;
     
@@ -782,7 +782,7 @@ function checkBossCollision(p) {
     }
 }
 
-// Player attack
+
 function attack(p) {
     if (p.attackCooldown > 0) return;
     
@@ -858,7 +858,7 @@ function attack(p) {
     }
 }
 
-// Move enemies
+
 function moveEnemies() {
     if (isCoopMode && !isHost) return;
     for (const enemy of enemies) {
@@ -888,7 +888,7 @@ function moveEnemies() {
     }
 }
 
-// Move boss
+
 function moveBoss() {
     if (isCoopMode && !isHost) return;
     if (!boss || !boss.active) return;
@@ -933,7 +933,7 @@ function moveBoss() {
     }
 }
 
-// Move projectiles
+
 function moveProjectiles() {
     if (isCoopMode && !isHost) return;
     for (let i = 0; i < gameObjects.length; i++) {
@@ -1005,7 +1005,7 @@ function moveProjectiles() {
     }
 }
 
-// Improved dialog system
+
 function showDialog(messages) {
     if (messages.length === 0) return;
     
@@ -1033,7 +1033,7 @@ function showDialog(messages) {
     }, 50);
 }
 
-// Convert HEX to RGB
+
 function hexToRgb(hex) {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
@@ -1041,7 +1041,7 @@ function hexToRgb(hex) {
     return { r, g, b };
 }
 
-// Render game
+
 function draw() {
     frameCount++;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1327,7 +1327,7 @@ for (const id in otherPlayers) {
     ctx.shadowBlur = 0;
 }
 
-// Initialize Socket.IO for cooperative mode
+
 function initSocket() {
     socket = io('https://neon-adventure-peerjs.onrender.com', {
         transports: ['websocket'],
@@ -1363,7 +1363,7 @@ function initSocket() {
 
     socket.on('playerUpdate', (data) => {
         if (data.playerId !== player.id && player2) {
-        // обновление player2 как раньше
+        
         player2.x = data.x;
         player2.y = data.y;
         player2.direction = data.direction;
@@ -1377,7 +1377,7 @@ function initSocket() {
         player2.invincibleTimer = data.invincibleTimer || 0;
         livesDisplay.textContent = player.lives;
     } else if (data.playerId !== player.id) {
-        // если другой игрок не player2, запишем его в otherPlayers
+        
         if (!otherPlayers[data.playerId]) {
             otherPlayers[data.playerId] = {
                 x: data.x,
@@ -1537,7 +1537,7 @@ function initSocket() {
     });
 }
 
-// Host cooperative game
+
 function initHost() {
     isHost = true;
     isCoopMode = true;
@@ -1602,7 +1602,7 @@ function initHost() {
     });
 }
 
-// Join cooperative game
+
 function joinCoop(peerId) {
     if (!peerId) {
         showDialog(["Введите ID хоста!"]);
@@ -1644,7 +1644,7 @@ function joinCoop(peerId) {
     });
 }
 
-// Main game loop
+
 function gameLoop() {
     if (titleScreen.style.display !== 'none' || gameOverScreen.style.display === 'flex' || 
         levelCompleteScreen.style.display === 'flex' || victoryScreen.style.display === 'flex' || 
@@ -1670,7 +1670,7 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Event handlers
+
 singleBtn.addEventListener('click', () => {
     isCoopMode = false;
     titleScreen.style.display = 'none';
@@ -1758,5 +1758,5 @@ puzzleSubmit.addEventListener('click', () => {
     }
 });
 
-// Initialize game
+
 initLevels();
