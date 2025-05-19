@@ -1594,14 +1594,14 @@ function initHost() {
              hasSword: false,
              invincible: false,
              invincibleTimer: 0,
-             color: '#f00',
+             color: '#00f',
              hasPotion: false,
              damageMultiplier: 1,
              catEars: false,
              earAngle: 0,
              tailAngle: 0,
              isMoving: false,
-             id: 'player2',
+             id: 'player1',
              keysPressed: {},
              attackCooldown: 0
         };
