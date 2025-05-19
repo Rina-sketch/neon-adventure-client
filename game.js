@@ -1582,6 +1582,9 @@ function initHost() {
         peerIdDisplay.style.display = 'block';
         showDialog(["Поделитесь этим ID с другом: " + roomId]);
 
+        player.id = 'player1';
+        player.color = '#00f';
+
         player2 = {
              x: levels[1].startPos2.x,
              y: levels[1].startPos2.y,
@@ -1594,14 +1597,14 @@ function initHost() {
              hasSword: false,
              invincible: false,
              invincibleTimer: 0,
-             color: '#00f',
+             color: '#f00',
              hasPotion: false,
              damageMultiplier: 1,
              catEars: false,
              earAngle: 0,
              tailAngle: 0,
              isMoving: false,
-             id: 'player1',
+             id: 'player2',
              keysPressed: {},
              attackCooldown: 0
         };
