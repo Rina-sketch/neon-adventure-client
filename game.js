@@ -1361,69 +1361,41 @@ function initSocket() {
         }, 3000);
     });
 
-socket.on('playerUpdate', (data) => {
-    // Если это обновление хоста (player1)
-    if (data.playerId === 'player1') {
-        // Для хоста: player2 - это удаленный игрок (должен быть синим)
-        if (!player2) {
-            player2 = {
+    socket.on('playerUpdate', (data) => {
+        if (data.playerId !== player.id && player2) {
+        
+        player2.x = data.x;
+        player2.y = data.y;
+        player2.direction = data.direction;
+        player2.keys = data.keys;
+        player2.lives = data.lives;
+        player2.hasSword = data.hasSword;
+        player2.hasPotion = data.hasPotion;
+        player2.damageMultiplier = data.damageMultiplier;
+        player2.catEars = data.catEars;
+        player2.invincible = data.invincible || false;
+        player2.invincibleTimer = data.invincibleTimer || 0;
+        livesDisplay.textContent = player.lives;
+    } else if (data.playerId !== player.id) {
+        
+        if (!otherPlayers[data.playerId]) {
+            otherPlayers[data.playerId] = {
                 x: data.x,
                 y: data.y,
                 width: 30,
                 height: 30,
-                speed: 5,
                 direction: data.direction,
-                keys: data.keys,
-                lives: data.lives,
-                hasSword: data.hasSword,
-                invincible: data.invincible || false,
-                invincibleTimer: data.invincibleTimer || 0,
-                color: '#00f', // Синий цвет для хоста
-                id: 'player1'
+                color: '#f00',
+                lives: data.lives
             };
         } else {
-            player2.x = data.x;
-            player2.y = data.y;
-            player2.direction = data.direction;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.invincible = data.invincible || false;
-            player2.invincibleTimer = data.invincibleTimer || 0;
+            const p = otherPlayers[data.playerId];
+            p.x = data.x;
+            p.y = data.y;
+            p.direction = data.direction;
+            p.lives = data.lives;
         }
     }
-    // Если это обновление второго игрока (player2)
-    else if (data.playerId === 'player2') {
-        // Для второго игрока: player - это локальный игрок, player2 - хост
-        if (!player) {
-            player = {
-                x: data.x,
-                y: data.y,
-                width: 30,
-                height: 30,
-                speed: 5,
-                direction: data.direction,
-                keys: data.keys,
-                lives: data.lives,
-                hasSword: data.hasSword,
-                invincible: data.invincible || false,
-                invincibleTimer: data.invincibleTimer || 0,
-                color: '#f00', // Красный цвет для второго игрока
-                id: 'player2'
-            };
-        } else {
-            player.x = data.x;
-            player.y = data.y;
-            player.direction = data.direction;
-            player.keys = data.keys;
-            player.lives = data.lives;
-            player.hasSword = data.hasSword;
-            player.invincible = data.invincible || false;
-            player.invincibleTimer = data.invincibleTimer || 0;
-        }
-    }
-    
-    livesDisplay.textContent = player ? player.lives : (player2 ? player2.lives : 0);
 });
 
     socket.on('keyDown', (data) => {
@@ -1576,8 +1548,6 @@ function initHost() {
         peerIdSpan.textContent = roomId;
         peerIdDisplay.style.display = 'block';
         showDialog(["Поделитесь этим ID с другом: " + roomId]);
-        player.id = 'player1'; // Явно задаем ID
-        player2.id = 'player2'; // Явно задаем ID
 
         player2 = {
             x: levels[1].startPos2.x,
