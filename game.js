@@ -1682,31 +1682,37 @@ function joinCoop(peerId) {
 
 // Main game loop
 function gameLoop() {
-    if (titleScreen.style.display !== 'none' || gameOverScreen.style.display === 'flex' || 
-        levelCompleteScreen.style.display === 'flex' || victoryScreen.style.display === 'flex' || 
-        skinMenu.style.display === 'flex' || puzzleContainer.style.display === 'flex') {
+    if (
+        titleScreen.style.display !== 'none' ||
+        gameOverScreen.style.display === 'flex' ||
+        levelCompleteScreen.style.display === 'flex' ||
+        victoryScreen.style.display === 'flex' ||
+        skinMenu.style.display === 'flex' ||
+        puzzleContainer.style.display === 'flex'
+    ) {
         draw();
         requestAnimationFrame(gameLoop);
         return;
     }
-    
+
     if (player.lives > 0) movePlayer(player);
+
+    // 🔥 Критично! Клиент двигает хоста (player2)
     if (isCoopMode && !isHost && player2 && player2.lives > 0) {
         movePlayer(player2);
     }
-    
+
     if (isHost || !isCoopMode) {
         moveEnemies();
         moveBoss();
         moveProjectiles();
     }
-    
+
     playBackgroundMusic();
-    
     draw();
-    
     requestAnimationFrame(gameLoop);
 }
+
 
 // Event handlers
 singleBtn.addEventListener('click', () => {
