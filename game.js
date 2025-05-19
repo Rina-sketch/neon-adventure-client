@@ -417,11 +417,15 @@ function loadLevel(levelNum) {
     walls = [...level.walls];
     keys = level.keys.map(key => ({ ...key }));
     doors = level.doors.map(door => {
-        if (levelNum === 3) {
+    if (levelNum === 3) {
+        if (isCoopMode) {
+            return { ...door, locked: false }; 
+        } else {
             return { ...door, locked: !player.hasPotion && !(player2 && player2.hasPotion) };
         }
-        return { ...door };
-    });
+    }
+    return { ...door };
+});
     npcs = level.npcs.map(npc => ({ ...npc }));
     enemies = level.enemies.map(enemy => ({ ...enemy }));
     chests = level.chests.map(chest => ({ ...chest }));
