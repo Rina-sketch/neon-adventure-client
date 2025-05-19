@@ -571,7 +571,7 @@ function movePlayer(p) {
         p.attackCooldown--;
     }
     
-    if (isCoopMode && socket) {
+    if (isCoopMode && socket && isHost) {
         socket.emit('playerUpdate', {
             roomId,
             playerId: p.id,
