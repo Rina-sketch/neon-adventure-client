@@ -571,19 +571,19 @@ function movePlayer(p) {
         p.attackCooldown--;
     }
     
-    if (isCoopMode && socket) {
-        socket.emit('playerUpdate', {
-            roomId,
-            playerId: p.id,
-            x: p.x,
-            y: p.y,
-            direction: p.direction,
-            keys: p.keys,
-            lives: p.lives,
-            hasSword: p.hasSword,
-            hasPotion: p.hasPotion,
-            damageMultiplier: p.damageMultiplier,
-            catEars: p.catEars
+     if (isCoopMode && socket && p.id === player.id) {
+    socket.emit('playerUpdate', {
+      roomId,
+      playerId: p.id,
+      x: p.x,
+      y: p.y,
+      direction: p.direction,
+      keys: p.keys,
+      lives: p.lives,
+      hasSword: p.hasSword,
+      hasPotion: p.hasPotion,
+      damageMultiplier: p.damageMultiplier,
+      catEars: p.catEars
         });
     }
 }
@@ -1527,7 +1527,6 @@ function initHost() {
 
     socket.on('connect', () => {
         roomId = socket.id;
-        socket.emit('joinRoom', roomId);
         peerIdSpan.textContent = roomId;
         peerIdDisplay.style.display = 'block';
         showDialog(["Поделитесь этим ID с другом: " + roomId]);
@@ -1638,7 +1637,7 @@ function gameLoop() {
     }
     
     if (player.lives > 0) movePlayer(player);
-    if (player2 && player2.lives > 0) movePlayer(player2);
+    if (isHost && player2 && player2.lives > 0) movePlayer(player2);
     
     if (isHost || !isCoopMode) {
         moveEnemies();
