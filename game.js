@@ -571,19 +571,19 @@ function movePlayer(p) {
         p.attackCooldown--;
     }
     
-     if (isCoopMode && socket && p.id === player.id) {
-    socket.emit('playerUpdate', {
-      roomId,
-      playerId: p.id,
-      x: p.x,
-      y: p.y,
-      direction: p.direction,
-      keys: p.keys,
-      lives: p.lives,
-      hasSword: p.hasSword,
-      hasPotion: p.hasPotion,
-      damageMultiplier: p.damageMultiplier,
-      catEars: p.catEars
+    if (isCoopMode && socket) {
+        socket.emit('playerUpdate', {
+            roomId,
+            playerId: p.id,
+            x: p.x,
+            y: p.y,
+            direction: p.direction,
+            keys: p.keys,
+            lives: p.lives,
+            hasSword: p.hasSword,
+            hasPotion: p.hasPotion,
+            damageMultiplier: p.damageMultiplier,
+            catEars: p.catEars
         });
     }
 }
@@ -1362,21 +1362,34 @@ function initSocket() {
     });
 
     socket.on('playerUpdate', (data) => {
-        if (data.playerId !== player.id && player2) {
-        console.log('Updating player2:', data);
-        
-        player2.x = data.x;
-        player2.y = data.y;
-        player2.direction = data.direction;
-        player2.keys = data.keys;
-        player2.lives = data.lives;
-        player2.hasSword = data.hasSword;
-        player2.hasPotion = data.hasPotion;
-        player2.damageMultiplier = data.damageMultiplier;
-        player2.catEars = data.catEars;
-        player2.invincible = data.invincible || false;
-        player2.invincibleTimer = data.invincibleTimer || 0;
-        livesDisplay.textContent = player.lives;
+    if (data.playerId === 'player1') {
+        if (!isHost) {
+            player2.x = data.x;
+            player2.y = data.y;
+            player2.direction = data.direction;
+            player2.keys = data.keys;
+            player2.lives = data.lives;
+            player2.hasSword = data.hasSword;
+            player2.hasPotion = data.hasPotion;
+            player2.damageMultiplier = data.damageMultiplier;
+            player2.catEars = data.catEars;
+            player2.invincible = data.invincible || false;
+            player2.invincibleTimer = data.invincibleTimer || 0;
+        }
+    } else if (data.playerId === 'player2') {
+        if (isHost) {
+            player2.x = data.x;
+            player2.y = data.y;
+            player2.direction = data.direction;
+            player2.keys = data.keys;
+            player2.lives = data.lives;
+            player2.hasSword = data.hasSword;
+            player2.hasPotion = data.hasPotion;
+            player2.damageMultiplier = data.damageMultiplier;
+            player2.catEars = data.catEars;
+            player2.invincible = data.invincible || false;
+            player2.invincibleTimer = data.invincibleTimer || 0;
+        }
     }
 });
 
@@ -1637,7 +1650,7 @@ function gameLoop() {
     }
     
     if (player.lives > 0) movePlayer(player);
-    if (isHost && player2 && player2.lives > 0) movePlayer(player2);
+    if (player2 && player2.lives > 0) movePlayer(player2);
     
     if (isHost || !isCoopMode) {
         moveEnemies();
