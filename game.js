@@ -669,7 +669,7 @@ function checkNPCCollisions(p) {
             p.y < npc.y + npc.height &&
             p.y + p.height > npc.y) {
             
-            if (npc.hasPuzzle && !p.hasPotion && !(player2 && player2.hasPotion)) {
+            if (!isCoopMode && npc.hasPuzzle && !p.hasPotion && !(player2 && player2.hasPotion)) {
                 puzzleContainer.style.display = 'flex';
                 if (isCoopMode && socket) {
                     socket.emit('openPuzzle', { roomId });
