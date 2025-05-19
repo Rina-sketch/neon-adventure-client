@@ -1363,35 +1363,16 @@ function initSocket() {
 
     socket.on('playerUpdate', (data) => {
     if (data.playerId === 'player1') {
-        if (!isHost) {
-            player2.x = data.x;
-            player2.y = data.y;
-            player2.direction = data.direction;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.invincible = data.invincible || false;
-            player2.invincibleTimer = data.invincibleTimer || 0;
+        if (!isHost && player2) {
+            Object.assign(player2, data);
         }
     } else if (data.playerId === 'player2') {
-        if (isHost) {
-            player2.x = data.x;
-            player2.y = data.y;
-            player2.direction = data.direction;
-            player2.keys = data.keys;
-            player2.lives = data.lives;
-            player2.hasSword = data.hasSword;
-            player2.hasPotion = data.hasPotion;
-            player2.damageMultiplier = data.damageMultiplier;
-            player2.catEars = data.catEars;
-            player2.invincible = data.invincible || false;
-            player2.invincibleTimer = data.invincibleTimer || 0;
+        if (isHost && player2) {
+            Object.assign(player2, data);
         }
     }
 });
+
 
     socket.on('keyDown', (data) => {
         if (data.playerId !== player.id && player2) {
@@ -1616,7 +1597,29 @@ function joinCoop(peerId) {
     socket.on('gameState', (state) => {
         currentLevel = state.level;
         player = { ...state.player2, id: 'player2', color: '#f00' };
-        player2 = { ...state.player, id: 'player1', color: '#00f' };
+        player2 = {
+    x: state.player.x,
+    y: state.player.y,
+    width: 30,
+    height: 30,
+    speed: 5,
+    direction: 'right',
+    keys: 0,
+    lives: 3,
+    hasSword: false,
+    invincible: false,
+    invincibleTimer: 0,
+    color: '#00f',
+    hasPotion: false,
+    damageMultiplier: 1,
+    catEars: false,
+    earAngle: 0,
+    tailAngle: 0,
+    isMoving: false,
+    id: 'player1',
+    keysPressed: {},
+    attackCooldown: 0
+};
         walls = state.walls.map(w => ({ ...w }));
         keys = state.keys.map(k => ({ ...k }));
         doors = state.doors.map(d => ({ ...d }));
